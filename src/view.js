@@ -11,10 +11,14 @@ function UpdateHandler(manipulators) {
     }
 }
 
+/**
+ * Bind a view to a set of variables
+ */
 function bind(bindingDetails) {
     let baseNode = typeof bindingDetails.node === 'string' 
         ? document.querySelector(bindingDetails.node) 
         : bindingDetails.node;
+
     let variables = domparser.parse(baseNode);
     let manipulators = [];
     variables.forEach((nodes, variable) => {
