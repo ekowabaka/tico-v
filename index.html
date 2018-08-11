@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="src/dom_manipulators.js"></script>
+        <script src="src/textparser.js"></script>
+        <script src="src/domparser.js"></script>
+        <script src="src/view.js"></script>
+    </head>
+    <body>
+        <span id="span1">{{hello}}</span>
+        <script type="text/javascript">
+            let span1 = simpleview.bind({node : "#span1"});
+            span1.hello = "Hello World";
+        </script>
+    </body>
+</html>
