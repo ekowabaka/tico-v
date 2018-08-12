@@ -19,7 +19,6 @@ function TextNodeManipulator(node) {
 
 function AttributeManipulator(node) {
     this.update = function(data) {
-        console.log(data, node);
         node.node.value = renderText(node.structure, data);
     }
 }

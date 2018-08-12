@@ -8,10 +8,17 @@
     </head>
     <body>
         <span sv-value-style="color:{{color}}" id="span1">{{hello}}</span>
+        <div id="name" sv-value-style="color:{{color}}">
+            <span sv-value-style="background-color:{{color}};color:white">{{firstname}}</span> <span>{{lastname}}</span>
+        </div>
         <script type="text/javascript">
             let span1 = simpleview.bind({node : "#span1"});
             span1.hello = "Hello World";
             span1.color = "red";
+            let name = simpleview.bind({node: '#name'});
+            name.firstname = 'Jamie';
+            name.lastname = 'Coolie';
+            name.color = 'green';
         </script>
     </body>
 </html>

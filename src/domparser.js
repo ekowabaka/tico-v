@@ -1,7 +1,7 @@
 function DomParser() {
 
     let textParser = new TextParser()
-    let attributeRegexes = ["sv-foreach", "sv-if", "sv-not-if", "(sv-value)-([a-z0-9_\-]+)", "(sv-).*"].map(regex => new RegExp(regex, 'i'));
+    let attributeRegexes = ["sv-foreach", "sv-true", "sv-not-true", "(sv-value)-([a-z0-9_\-]+)", "(sv-).*"].map(regex => new RegExp(regex, 'i'));
 
     function addNodeToVariable(variables, variable, nodeDetails) {
         if(!variables.has(variable)) {
@@ -11,7 +11,8 @@ function DomParser() {
     }
 
     function parseAttributes(node, variables) {
-        for(let attribute of node.attributes) {
+        for(let i in node.attributes) {
+            let attribute = node.attributes[i];
             for(let regex of attributeRegexes) {
                 let match = regex.exec(attribute.name);
                 if(!match) continue;
@@ -22,9 +23,29 @@ function DomParser() {
                     parsed.variables.forEach(variable => {
                         addNodeToVariable(variables, variable, {node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure})
                     })
+                } else if (match[0] === 'sv-true') {
+                    addNodeToVariable(variables, attribute.value, {node: node, type: 'truth'})
                 }
             }
         }
+    }
+
+    function parseNode(node, variables) {
+        parseAttributes(node, variables);
+        node.childNodes.forEach(child => {
+            let parsed = [];
+
+            if(child.nodeType == Node.TEXT_NODE) {
+                parsed = textParser.parse(child.textContent);
+                parsed.variables.forEach(variable => {
+                    addNodeToVariable(variables, variable, {node: child, type: 'text', structure: parsed.structure})
+                });
+            } else if (child.nodeType == Node.ELEMENT_NODE) {
+                parseNode(child, variables);
+            }
+        });
+
+        return variables;
     }
 
     /**
@@ -33,23 +54,7 @@ function DomParser() {
      * @param {Node} node 
      */
     this.parse = function (node) {
-
         let variables = new Map();
-
-        parseAttributes(node, variables);
-        node.childNodes.forEach(child => {
-            let parsed = [];
-
-            if(child.nodeType == Node.TEXT_NODE) {
-                parsed = textParser.parse(child.textContent);
-            } else if (child.nodeType == Node.ELEMENT_NODE) {
-                parsed = parseNode(child);
-            }
-            parsed.variables.forEach(variable => {
-                addNodeToVariable(variables, variable, {node: child, type: 'text', structure: parsed.structure})
-            });
-        });
-
-        return variables;
+        return parseNode(node, variables);
     }
 }
