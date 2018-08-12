@@ -23,11 +23,23 @@ function AttributeManipulator(node) {
     }
 }
 
+function TruthAttrubuteManipulator(node, invert) {
+    this.update = function(data) {
+        if((data[node.name] && !invert) || (!data[node.name] && invert)) {
+            node.node.style.display = node.display;
+        } else {
+            node.node.style.display = 'none';
+        }
+    }
+}
+
 const DomManipulators = {
     create : function(node) {
         switch(node.type) {
             case 'text': return new TextNodeManipulator(node);
             case 'attribute': return new AttributeManipulator(node);
+            case 'truth': return new TruthAttrubuteManipulator(node, false);
+            case 'not-truth': return new TruthAttrubuteManipulator(node, true);
             default: throw `Unknown type ${node.type}`
         }
     }

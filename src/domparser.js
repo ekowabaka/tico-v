@@ -24,7 +24,9 @@ function DomParser() {
                         addNodeToVariable(variables, variable, {node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure})
                     })
                 } else if (match[0] === 'sv-true') {
-                    addNodeToVariable(variables, attribute.value, {node: node, type: 'truth'})
+                    addNodeToVariable(variables, attribute.value, {node: node, type: 'truth', name: attribute.value, display: node.style.display})
+                } else if (match[0] === 'sv-not-true') {
+                    addNodeToVariable(variables, attribute.value, {node: node, type: 'not-truth', name: attribute.value, display: node.style.display})
                 }
             }
         }
