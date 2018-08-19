@@ -88,3 +88,8 @@ let simpleview = {
     bind: bind
 }
 
+if (typeof require === 'function') {
+  module.exports = simpleview;
+} else {
+  window.simpleview = simpleview;
+}

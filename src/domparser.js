@@ -1,6 +1,6 @@
 function DomParser() {
 
-    let textParser = new TextParser()
+    let textParser = new TextParser();
     let attributeRegexes = ["sv-foreach", "sv-true", "sv-not-true", "(sv-value)-([a-z0-9_\-]+)", "(sv-).*"].map(regex => new RegExp(regex, 'i'));
     let parentId = Math.random();
 

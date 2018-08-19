@@ -1,11 +1,5 @@
 function TextParser() 
 {
-    let tokens = {
-        TEXT : 'text',
-        VAR : 'var',
-        CONDITION: 'cond'
-    };
-
     let regexes = {
         variable : new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*}}`, 'i'),
         condstr : new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*"([^"]*)"\\s*}}`, 'i'),
