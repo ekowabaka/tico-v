@@ -10,37 +10,82 @@ function renderText(structure, data) {
       }, "");        
 }
 
-function TextNodeManipulator(node) {
+function TextNodeManipulator(entry) {
 
-    this.update = function(data) {
-        node.node.textContent = renderText(node.structure, data)
+    this.update = function(data, node) {
+        let final = node || entry.node;
+        final.textContent = renderText(entry.structure, data)
     }
 }
 
-function AttributeManipulator(node) {
-    this.update = function(data) {
-        node.node.value = renderText(node.structure, data);
+function AttributeManipulator(entry) {
+    this.update = function(data, node) {
+        let final = node || entry.node;
+        final.value = renderText(entry.structure, data);
     }
 }
 
-function TruthAttrubuteManipulator(node, invert) {
-    this.update = function(data) {
-        if((data[node.name] && !invert) || (!data[node.name] && invert)) {
-            node.node.style.display = node.display;
+function TruthAttrubuteManipulator(entry, invert) {
+    
+    this.update = function(data, node) {
+        let final = node || entry.node;
+        if((data[entry.name] && !invert) || (!data[entry.name] && invert)) {
+            final.style.display = entry.display;
         } else {
-            node.node.style.display = 'none';
+            final.style.display = 'none';
         }
     }
 }
 
-const DomManipulators = {
-    create : function(node) {
-        switch(node.type) {
-            case 'text': return new TextNodeManipulator(node);
-            case 'attribute': return new AttributeManipulator(node);
-            case 'truth': return new TruthAttrubuteManipulator(node, false);
-            case 'not-truth': return new TruthAttrubuteManipulator(node, true);
-            default: throw `Unknown type ${node.type}`
+function ForeachManipulator(entry) {
+
+    let manipulators = DomManipulators.create(entry.variables);
+    entry.manipulators = manipulators;
+
+    this.update = function (data) {
+        data = data[entry.name];
+        if(!Array.isArray(data)) throw new "For each variable must be an array";
+        entry.parent.innerHTML = "";
+        for(let row of data) {
+            manipulators.forEach(manipulator => manipulator.update(row));
+            entry.parent.appendChild(entry.template.cloneNode(true));
         }
+    }
+}
+
+/**
+ * Manipulate the DOM
+ */
+const DomManipulators = {
+    create : function(variables) {
+
+        let manipulators = [];
+        let manipulator;
+
+        variables.forEach( variable => {
+            variable.forEach( entry => {
+                switch(entry.type) {
+                    case 'text': 
+                        manipulator = new TextNodeManipulator(entry);
+                        break;
+                    case 'attribute': 
+                        manipulator = new AttributeManipulator(entry);
+                        break;
+                    case 'truth': 
+                        manipulator = new TruthAttrubuteManipulator(entry, false);
+                        break;
+                    case 'not-truth': 
+                        manipulator = new TruthAttrubuteManipulator(entry, true);
+                        break;
+                    case 'foreach': 
+                        manipulator = new ForeachManipulator(entry);
+                        break;
+                    default: throw `Unknown type ${entry.type}`
+                }
+                manipulators.push(manipulator);
+            });
+        });
+
+        return manipulators;
     }
 }
