@@ -16,6 +16,14 @@
         <ul>
             <li id="people2" sv-foreach="people"><span style="color:blue">{{firstname}}</span> <span style="color:red">{{lastname}}</span></li>
         </ul>
+        <ul>
+            <li id="nested" sv-foreach="level1">
+                <span>{{name}}</span>
+                <ul>
+                    <li  sv-foreach="places">{{place}}</li>
+                </ul>
+            </li>
+        </ul>
         <script type="text/javascript">
             let span1 = simpleview.bind({node : "#span1"});
             span1.data.hello = "Hello World";
@@ -30,6 +38,13 @@
             let people2 = simpleview.bind({node: "#people2"});
             people2.data = {people: [{firstname:'James', lastname:'Ainooson'}, {firstname: 'Janice', lastname: 'Boateng'}, {firstname: 'Ekow', lastname: 'Ainooson'}, {firstname:'Phone', lastname: 'Tablet'}]};
             people2.data.people.splice(1,1);
+            let nested = simpleview.bind({node: "#nested"});
+            nested.data = {
+                level1: [
+                    {name: 'James', places: [{place: 'Accra'}, {place: 'Nashville'}]},
+                    {name: 'Janice', places: [{place: 'Kumasi'}, {place: 'Chicago'}]}
+                ]
+            }
         </script>
     </body>
 </html>

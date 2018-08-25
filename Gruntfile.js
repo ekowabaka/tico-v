@@ -12,16 +12,10 @@ module.exports = function(grunt) {
               dest: 'dist/simpleview.js',
           },
       },
-      uglify: {
-          dist: {
-              src: 'dist/simpleview.js',
-              dest: 'dist/simpleview.min.js'
-          }
-      },
       clean : ['dist', 'build']
   });
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.registerTask('default', ['concat']);
-  grunt.registerTask('build', ['concat', 'uglify'])
+  grunt.registerTask('build', ['concat'])
 }
