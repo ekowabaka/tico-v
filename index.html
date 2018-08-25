@@ -6,7 +6,7 @@
     <body>
         <span sv-value-style="color:{{color}}" id="span1">{{hello}}</span>
         <div id="name" sv-value-style="color:{{color}}">
-            <span sv-value-style="background-color:{{color}};color:white">HPP: {{firstname?"Something"}}</span>
+            <span sv-value-style='background-color:{{color}};color:{{firstname?"pink"}} '>HPP: {{firstname?"Something"}}</span>
             {{color}}<span sv-true="lastname">{{lastname}}</span>
             <span sv-not-true="lastname">No name!</span>
         </div>
@@ -17,7 +17,7 @@
             <li id="people2" sv-foreach="people"><span style="color:blue">{{firstname}}</span> <span style="color:red">{{lastname}}</span></li>
         </ul>
         <ul>
-            <li id="nested" sv-foreach="level1">
+            <li id="nested" sv-foreach="level1" sv-value-title="{{name}}">
                 <span>{{name}}</span>
                 <ul>
                     <li  sv-foreach="places">{{place}}</li>

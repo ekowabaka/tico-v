@@ -5,7 +5,8 @@ module.exports = function(grunt) {
       concat: {
           options: {
             banner: '(function(){',
-            footer: '})();'
+            footer: '})();',
+            sourcemap: true
           },
           dist: {
               src: js_sources,
