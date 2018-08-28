@@ -38,7 +38,12 @@
             let people2 = simpleview.bind({node: "#people2"});
             people2.data = {people: [{firstname:'James', lastname:'Ainooson'}, {firstname: 'Janice', lastname: 'Boateng'}, {firstname: 'Ekow', lastname: 'Ainooson'}, {firstname:'Phone', lastname: 'Tablet'}]};
             people2.data.people.splice(1,1);
-            let nested = simpleview.bind({node: "#nested"});
+            let nested = simpleview.bind({
+                node: "#nested",
+                onCreate: {
+                    level1: node => console.log(node)
+                }
+            });
             nested.data = {
                 level1: [
                     {name: 'James', places: [{place: 'Accra'}, {place: 'Nashville'}]},

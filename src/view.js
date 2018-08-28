@@ -57,7 +57,7 @@ function UpdateHandler(variables, manipulators, node) {
     }
 }
 
-function View(variables, manipulators) {
+function View(variables, manipulators, bindingDetails) {
     let dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators));
 
     Object.defineProperty(this, 'data', {
@@ -66,6 +66,9 @@ function View(variables, manipulators) {
             let updateHandler = new UpdateHandler(variables, manipulators);
             dataProxy = new Proxy(newData, updateHandler);
             updateHandler.run(newData);
+            if(bindingDetails.onCreate && typeof bindingDetails.onCreate.$default === 'function') {
+              bindingDetails.onCreate.$default(bindingDetails.baseNode);
+            }
         }
     });    
 }
@@ -74,14 +77,13 @@ function View(variables, manipulators) {
  * Bind a view to a set of variables
  */
 function bind(bindingDetails) {
-    let baseNode = typeof bindingDetails.node === 'string' 
+    bindingDetails.baseNode = typeof bindingDetails.node === 'string' 
         ? document.querySelector(bindingDetails.node) 
         : bindingDetails.node;
 
-    let variables = domparser.parse(baseNode);
+    let variables = domparser.parse(bindingDetails);
     let manipulators = DomManipulators.create(variables);
-
-    return new View(variables, manipulators)
+    return new View(variables, manipulators, bindingDetails);
 }
 
 let simpleview = {

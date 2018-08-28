@@ -129,7 +129,7 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseAttributes(node, variables) {
+  function parseAttributes(node, variables, bindingDetails) {
     let parentDetected = false;
     let attributeVariables = new Map();
 
@@ -150,7 +150,16 @@ function DomParser() {
         } else if (match[0] === 'sv-not-true') {
           addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'not-truth', name: attribute.value, display: node.style.display })
         } else if (match[0] == 'sv-foreach') {
-          parentDetected = { template: node, type: 'foreach', parent: node.parentNode, name: attribute.value, variables: attributeVariables, nodes: [] };
+          parentDetected = { 
+            template: node, 
+            type: 'foreach', 
+            parent: node.parentNode, 
+            name: attribute.value, 
+            variables: attributeVariables, 
+            nodes: [] ,
+            callback: bindingDetails.onCreate && typeof bindingDetails.onCreate[attribute.value] === 'function' ? 
+                        bindingDetails.onCreate[attribute.value] : false
+          };
           parentDetected.parent.removeAttribute('id');
           addNodeToVariable(variables, attribute.value, parentDetected)
         }
@@ -171,12 +180,10 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseNode(node, variables) {
-    let parentDetected = parseAttributes(node, variables);
-    //let childId = 0;
+  function parseNode(node, variables, bindingDetails) {
+    let parentDetected = parseAttributes(node, variables, bindingDetails);
 
     if (parentDetected) {
-      console.log(parentDetected);
       variables = parentDetected.variables;
     }
 
@@ -189,10 +196,7 @@ function DomParser() {
           addNodeToVariable(variables, variable, { node: child, type: 'text', structure: parsed.structure })
         });
       } else if (child.nodeType == Node.ELEMENT_NODE) {
-        // if (parentDetected) {
-        //   child.setAttribute("id", `${parentId}-${childId++}`)
-        // }
-        parseNode(child, variables);
+        parseNode(child, variables, bindingDetails);
       }
     });
   }
@@ -202,13 +206,18 @@ function DomParser() {
    * and related dom manipulators.
    * @param {Node} node 
    */
-  this.parse = function (node) {
+  this.parse = function (bindingDetails) {
     let variables = new Map();
-    parseNode(node, variables);
+    parseNode(bindingDetails.baseNode, variables, bindingDetails);
     return variables;
   }
 }
 
+/**
+ * 
+ * @param {Array} structure 
+ * @param {Object} data 
+ */
 function renderText(structure, data) {
     return structure.reduce((string, segment) => {
         switch(segment.type) {
@@ -259,7 +268,11 @@ function ForeachManipulator(entry) {
         entry.parent.innerHTML = "";
         for(let row of data) {
             manipulators.forEach(manipulator => manipulator.update(row));
-            entry.parent.appendChild(entry.template.cloneNode(true));
+            let newNode = entry.template.cloneNode(true);
+            if(entry.callback) {
+              entry.callback(newNode);
+            }
+            entry.parent.appendChild(newNode);
         }
     }
 }
@@ -359,7 +372,7 @@ function UpdateHandler(variables, manipulators, node) {
     }
 }
 
-function View(variables, manipulators) {
+function View(variables, manipulators, bindingDetails) {
     let dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators));
 
     Object.defineProperty(this, 'data', {
@@ -368,6 +381,9 @@ function View(variables, manipulators) {
             let updateHandler = new UpdateHandler(variables, manipulators);
             dataProxy = new Proxy(newData, updateHandler);
             updateHandler.run(newData);
+            if(bindingDetails.onCreate && typeof bindingDetails.onCreate.$default === 'function') {
+              bindingDetails.onCreate.$default(bindingDetails.baseNode);
+            }
         }
     });    
 }
@@ -376,14 +392,13 @@ function View(variables, manipulators) {
  * Bind a view to a set of variables
  */
 function bind(bindingDetails) {
-    let baseNode = typeof bindingDetails.node === 'string' 
+    bindingDetails.baseNode = typeof bindingDetails.node === 'string' 
         ? document.querySelector(bindingDetails.node) 
         : bindingDetails.node;
 
-    let variables = domparser.parse(baseNode);
+    let variables = domparser.parse(bindingDetails);
     let manipulators = DomManipulators.create(variables);
-
-    return new View(variables, manipulators)
+    return new View(variables, manipulators, bindingDetails);
 }
 
 let simpleview = {

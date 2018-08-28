@@ -44,7 +44,7 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseAttributes(node, variables) {
+  function parseAttributes(node, variables, bindingDetails) {
     let parentDetected = false;
     let attributeVariables = new Map();
 
@@ -65,7 +65,16 @@ function DomParser() {
         } else if (match[0] === 'sv-not-true') {
           addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'not-truth', name: attribute.value, display: node.style.display })
         } else if (match[0] == 'sv-foreach') {
-          parentDetected = { template: node, type: 'foreach', parent: node.parentNode, name: attribute.value, variables: attributeVariables, nodes: [] };
+          parentDetected = { 
+            template: node, 
+            type: 'foreach', 
+            parent: node.parentNode, 
+            name: attribute.value, 
+            variables: attributeVariables, 
+            nodes: [] ,
+            callback: bindingDetails.onCreate && typeof bindingDetails.onCreate[attribute.value] === 'function' ? 
+                        bindingDetails.onCreate[attribute.value] : false
+          };
           parentDetected.parent.removeAttribute('id');
           addNodeToVariable(variables, attribute.value, parentDetected)
         }
@@ -86,8 +95,8 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseNode(node, variables) {
-    let parentDetected = parseAttributes(node, variables);
+  function parseNode(node, variables, bindingDetails) {
+    let parentDetected = parseAttributes(node, variables, bindingDetails);
 
     if (parentDetected) {
       variables = parentDetected.variables;
@@ -102,7 +111,7 @@ function DomParser() {
           addNodeToVariable(variables, variable, { node: child, type: 'text', structure: parsed.structure })
         });
       } else if (child.nodeType == Node.ELEMENT_NODE) {
-        parseNode(child, variables);
+        parseNode(child, variables, bindingDetails);
       }
     });
   }
@@ -112,9 +121,9 @@ function DomParser() {
    * and related dom manipulators.
    * @param {Node} node 
    */
-  this.parse = function (node) {
+  this.parse = function (bindingDetails) {
     let variables = new Map();
-    parseNode(node, variables);
+    parseNode(bindingDetails.baseNode, variables, bindingDetails);
     return variables;
   }
 }

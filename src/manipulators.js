@@ -1,3 +1,8 @@
+/**
+ * 
+ * @param {Array} structure 
+ * @param {Object} data 
+ */
 function renderText(structure, data) {
     return structure.reduce((string, segment) => {
         switch(segment.type) {
@@ -48,7 +53,11 @@ function ForeachManipulator(entry) {
         entry.parent.innerHTML = "";
         for(let row of data) {
             manipulators.forEach(manipulator => manipulator.update(row));
-            entry.parent.appendChild(entry.template.cloneNode(true));
+            let newNode = entry.template.cloneNode(true);
+            if(entry.callback) {
+              entry.callback(newNode);
+            }
+            entry.parent.appendChild(newNode);
         }
     }
 }
