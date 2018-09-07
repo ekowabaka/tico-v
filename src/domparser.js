@@ -22,7 +22,7 @@ function DomParser() {
   }
 
   /**
-   * 
+   * Merge one set of variables into another
    * 
    * @param {Map} variables 
    * @param {Map} mergedVariables 
@@ -75,7 +75,7 @@ function DomParser() {
             callback: bindingDetails.onCreate && typeof bindingDetails.onCreate[attribute.value] === 'function' ? 
                         bindingDetails.onCreate[attribute.value] : false
           };
-          parentDetected.parent.removeAttribute('id');
+          
           addNodeToVariable(variables, attribute.value, parentDetected)
         }
         break;

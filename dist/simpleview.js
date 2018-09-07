@@ -107,7 +107,7 @@ function DomParser() {
   }
 
   /**
-   * 
+   * Merge one set of variables into another
    * 
    * @param {Map} variables 
    * @param {Map} mergedVariables 
@@ -160,7 +160,7 @@ function DomParser() {
             callback: bindingDetails.onCreate && typeof bindingDetails.onCreate[attribute.value] === 'function' ? 
                         bindingDetails.onCreate[attribute.value] : false
           };
-          parentDetected.parent.removeAttribute('id');
+          
           addNodeToVariable(variables, attribute.value, parentDetected)
         }
         break;
@@ -219,190 +219,201 @@ function DomParser() {
  * @param {Object} data 
  */
 function renderText(structure, data) {
-    return structure.reduce((string, segment) => {
-        switch(segment.type) {
-          case 'var': return string + data[segment.name];
-          case 'txt': return string + segment.value;
-          case 'cond': return string + (data[segment.var1] ? data[segment.var1] : data[segment.var2]);
-          case 'condstr': return string + (data[segment.var1] ? segment.var2 : "");
-          case 'condstrelse': return string + (data[segment.var1] ? segment.var2 : segment.var3);
-        }
-      }, "");        
+  return structure.reduce((string, segment) => {
+    switch (segment.type) {
+      case 'var': return string + data[segment.name];
+      case 'txt': return string + segment.value;
+      case 'cond': return string + (data[segment.var1] ? data[segment.var1] : data[segment.var2]);
+      case 'condstr': return string + (data[segment.var1] ? segment.var2 : "");
+      case 'condstrelse': return string + (data[segment.var1] ? segment.var2 : segment.var3);
+    }
+  }, "");
 }
 
 function TextNodeManipulator(entry) {
 
-    this.update = function(data, node) {
-        let final = node || entry.node;
-        final.textContent = renderText(entry.structure, data)
-    }
+  this.update = function (data, node) {
+    let final = node || entry.node;
+    final.textContent = renderText(entry.structure, data)
+  }
 }
 
 function AttributeManipulator(entry) {
-    this.update = function(data, node) {
-        let final = node || entry.node;
-        final.value = renderText(entry.structure, data);
-    }
+  this.update = function (data, node) {
+    console.log(node);
+    let final = node || entry.node;
+    final.value = renderText(entry.structure, data);
+  }
 }
 
 function TruthAttrubuteManipulator(entry, invert) {
-    
-    this.update = function(data, node) {
-        let final = node || entry.node;
-        if((data[entry.name] && !invert) || (!data[entry.name] && invert)) {
-            final.style.display = entry.display;
-        } else {
-            final.style.display = 'none';
-        }
+
+  this.update = function (data, node) {
+    let final = node || entry.node;
+    if ((data[entry.name] && !invert) || (!data[entry.name] && invert)) {
+      final.style.display = entry.display;
+    } else {
+      final.style.display = 'none';
     }
+  }
 }
 
 function ForeachManipulator(entry) {
 
-    let manipulators = DomManipulators.create(entry.variables);
-    entry.manipulators = manipulators;
+  let manipulators = DomManipulators.create(entry.variables);
+  entry.manipulators = manipulators;
 
-    this.update = function (data) {
-        data = data[entry.name];
-        if(!Array.isArray(data)) throw new "For each variable must be an array";
-        entry.parent.innerHTML = "";
-        for(let row of data) {
-            manipulators.forEach(manipulator => manipulator.update(row));
-            let newNode = entry.template.cloneNode(true);
-            if(entry.callback) {
-              entry.callback(newNode);
-            }
-            entry.parent.appendChild(newNode);
-        }
+  function runCallback(node) {
+    if(entry.callback) {
+      entry.callback(node);
     }
+  }
+
+  this.update = function (data) {
+    data = data[entry.name];
+    if (!Array.isArray(data)) throw new "For each variable must be an array";
+    entry.parent.innerHTML = "";
+    for (let row of data) {
+      manipulators.forEach(manipulator => manipulator.update(row));
+      let newNode = entry.template.cloneNode(true);
+      entry.parent.appendChild(newNode);
+      runCallback(newNode);
+    }
+  }
+
+  this.set = function (key, data) {
+    manipulators.forEach(manipulator => manipulator.update(data));
+    let newNode = entry.template.cloneNode(true);
+    if (key == entry.parent.children.length) {
+      entry.parent.appendChild(newNode);
+    } else {
+      entry.parent.replaceChild(newNode, entry.parent.children[key]);
+    }
+    runCallback(newNode);
+  }
 }
 
 /**
  * Manipulate the DOM
  */
 const DomManipulators = {
-    create : function(variables) {
+  create: function (variables) {
 
-        let manipulators = [];
-        let manipulator;
+    let manipulators = [];
+    let manipulator;
 
-        variables.forEach( variable => {
-            variable.forEach( entry => {
-                switch(entry.type) {
-                    case 'text': 
-                        manipulator = new TextNodeManipulator(entry);
-                        break;
-                    case 'attribute': 
-                        manipulator = new AttributeManipulator(entry);
-                        break;
-                    case 'truth': 
-                        manipulator = new TruthAttrubuteManipulator(entry, false);
-                        break;
-                    case 'not-truth': 
-                        manipulator = new TruthAttrubuteManipulator(entry, true);
-                        break;
-                    case 'foreach': 
-                        manipulator = new ForeachManipulator(entry);
-                        break;
-                    default: throw `Unknown type ${entry.type}`
-                }
-                manipulators.push(manipulator);
-            });
-        });
+    variables.forEach(variable => {
+      variable.forEach(entry => {
+        switch (entry.type) {
+          case 'text':
+            manipulator = new TextNodeManipulator(entry);
+            break;
+          case 'attribute':
+            manipulator = new AttributeManipulator(entry);
+            break;
+          case 'truth':
+            manipulator = new TruthAttrubuteManipulator(entry, false);
+            break;
+          case 'not-truth':
+            manipulator = new TruthAttrubuteManipulator(entry, true);
+            break;
+          case 'foreach':
+            manipulator = new ForeachManipulator(entry);
+            break;
+          default: throw `Unknown type ${entry.type}`
+        }
+        manipulators.push(manipulator);
+      });
+    });
 
-        return manipulators;
-    }
+    return manipulators;
+  }
 }
 let domparser = new DomParser();
 
-function ArrayUpdateHandler(entry) {
-    let proxyCache = new WeakMap();
+function ArrayUpdateHandler(entry, manipulator) {
 
-    this.get = function(target, name) {
-        if(typeof target[name] === 'function' || typeof target[name] !== 'object') {
-            return target[name];
-        }
+  let proxyCache = new WeakMap();
 
-        let node = entry.parent.children[name];
-        if(!proxyCache.has(node)) {
-            proxyCache.set(node, new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name])));
-        }
-        return proxyCache.get(node);
+  this.get = function (target, name) {
+    if (typeof target[name] === 'function' || typeof target[name] !== 'object') {
+      return target[name];
     }
 
-    this.set = function(target, name, value) {
-        if(name === 'length') {
-            for(let i = 0; i < entry.parent.children.length - value; i++) {
-                entry.parent.removeChild(entry.parent.lastChild);
-            }
-            target[name] = value;
-            return true;
-        }
-
-        target[name] = value;
-
-        entry.manipulators.forEach(manipulator => manipulator.update(value));
-        entry.parent.replaceChild(entry.template.cloneNode(true), entry.parent.children[name]);
-
-        return true;
-
+    let node = entry.parent.children[name];
+    if (!proxyCache.has(node)) {
+      proxyCache.set(node, new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name])));
     }
+    return proxyCache.get(node);
+  }
+
+  this.set = function (target, name, value) {
+    target[name] = value;
+    if (name === 'length') {
+      for (let i = 0; i < entry.parent.children.length - value; i++) {
+        entry.parent.removeChild(entry.parent.lastChild);
+      }
+      return true;
+    }
+    manipulator.set(name, target[name]);
+    return true;
+  }
 }
 
 function UpdateHandler(variables, manipulators, node) {
-    this.get = function (target, name) {
-        if(typeof target[name] === 'object' && Array.isArray(target[name]) && variables.get(name)[0].type === "foreach") {
-            let entry = variables.get(name)[0];
-            let updateHandler = new ArrayUpdateHandler(entry);
-            return new Proxy(target[name], updateHandler);
-        } else if (typeof target[name] === 'object') {
-            return target[name];
-        } else {
-            return target[name];
-        }
+  this.get = function (target, name) {
+    if (typeof target[name] === 'object' && Array.isArray(target[name]) && variables.get(name)[0].type === "foreach") {
+      let entry = variables.get(name)[0];
+      let updateHandler = new ArrayUpdateHandler(entry, manipulators[0]);
+      return new Proxy(target[name], updateHandler);
+    } else if (typeof target[name] === 'object') {
+      return target[name];
+    } else {
+      return target[name];
     }
+  }
 
-    this.set = function (target, name, value) {
-        target[name] = value;
-        this.run(target);
-    }
+  this.set = function (target, name, value) {
+    target[name] = value;
+    this.run(target);
+  }
 
-    this.run = function(target) {
-        manipulators.forEach(manipulator => manipulator.update(target, node));
-    }
+  this.run = function (target) {
+    manipulators.forEach(manipulator => manipulator.update(target, node));
+  }
 }
 
 function View(variables, manipulators, bindingDetails) {
-    let dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators));
+  let dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators));
 
-    Object.defineProperty(this, 'data', {
-        get: () => dataProxy,
-        set: newData => {
-            let updateHandler = new UpdateHandler(variables, manipulators);
-            dataProxy = new Proxy(newData, updateHandler);
-            updateHandler.run(newData);
-            if(bindingDetails.onCreate && typeof bindingDetails.onCreate.$default === 'function') {
-              bindingDetails.onCreate.$default(bindingDetails.baseNode);
-            }
-        }
-    });    
+  Object.defineProperty(this, 'data', {
+    get: () => dataProxy,
+    set: newData => {
+      let updateHandler = new UpdateHandler(variables, manipulators);
+      dataProxy = new Proxy(newData, updateHandler);
+      updateHandler.run(newData);
+      if (bindingDetails.onCreate && typeof bindingDetails.onCreate.$default === 'function') {
+        bindingDetails.onCreate.$default(bindingDetails.baseNode);
+      }
+    }
+  });
 }
 
 /**
  * Bind a view to a set of variables
  */
 function bind(bindingDetails) {
-    bindingDetails.baseNode = typeof bindingDetails.node === 'string' 
-        ? document.querySelector(bindingDetails.node) 
-        : bindingDetails.node;
+  bindingDetails.baseNode = typeof bindingDetails.node === 'string'
+    ? document.querySelector(bindingDetails.node)
+    : bindingDetails.node;
 
-    let variables = domparser.parse(bindingDetails);
-    let manipulators = DomManipulators.create(variables);
-    return new View(variables, manipulators, bindingDetails);
+  let variables = domparser.parse(bindingDetails);
+  let manipulators = DomManipulators.create(variables);
+  return new View(variables, manipulators, bindingDetails);
 }
 
 let simpleview = {
-    bind: bind
+  bind: bind
 }
 
 if (typeof require === 'function') {
