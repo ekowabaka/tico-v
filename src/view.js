@@ -43,12 +43,27 @@ function UpdateHandler(variables, manipulators, node) {
   }
 
   this.set = function (target, name, value) {
+    console.log('set', name, value);
     target[name] = value;
     this.run(target);
   }
 
   this.run = function (target) {
-    manipulators.forEach(manipulator => manipulator.update(target, node));
+    manipulators.forEach(manipulator => {
+      let manipulatedNode = undefined;
+      if(node) {
+        let baseNode = manipulator.variables.path == "" ? node : node.querySelector(manipulator.variables.path);
+        if(manipulator.variables.type == "text") {
+          manipulatedNode = baseNode.childNodes[manipulator.variables.index];
+        } else if (manipulator.variables.type == "attribute") {
+          console.log(manipulator.variables.name);
+          manipulatedNode = baseNode.getAttributeNode(manipulator.variables.name);
+        } else {
+          manipulatedNode = baseNode;
+        }
+      }
+      manipulator.update(target, manipulatedNode)
+    });
   }
 }
 
@@ -77,6 +92,7 @@ function bind(bindingDetails) {
     : bindingDetails.node;
 
   let variables = domparser.parse(bindingDetails);
+  console.log(variables);
   let manipulators = DomManipulators.create(variables);
   return new View(variables, manipulators, bindingDetails);
 }

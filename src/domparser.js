@@ -44,7 +44,7 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseAttributes(node, variables, bindingDetails) {
+  function parseAttributes(node, variables, bindingDetails, path) {
     let parentDetected = false;
     let attributeVariables = new Map();
 
@@ -58,12 +58,12 @@ function DomParser() {
           attributeNode = document.createAttribute(match[2]);
           node.setAttributeNode(attributeNode);
           parsed.variables.forEach(variable => {
-            addNodeToVariable(attributeVariables, variable, { node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure })
+            addNodeToVariable(attributeVariables, variable, { node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure, path: path })
           })
         } else if (match[0] === 'sv-true') {
-          addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'truth', name: attribute.value, display: node.style.display })
+          addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'truth', name: attribute.value, display: node.style.display, path: path })
         } else if (match[0] === 'sv-not-true') {
-          addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'not-truth', name: attribute.value, display: node.style.display })
+          addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'not-truth', name: attribute.value, display: node.style.display, path: path })
         } else if (match[0] == 'sv-foreach') {
           parentDetected = { 
             template: node, 
@@ -71,7 +71,6 @@ function DomParser() {
             parent: node.parentNode, 
             name: attribute.value, 
             variables: attributeVariables, 
-            nodes: [] ,
             callback: bindingDetails.onCreate && typeof bindingDetails.onCreate[attribute.value] === 'function' ? 
                         bindingDetails.onCreate[attribute.value] : false
           };
@@ -95,23 +94,32 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseNode(node, variables, bindingDetails) {
-    let parentDetected = parseAttributes(node, variables, bindingDetails);
-
+  function parseNode(node, variables, bindingDetails, path) {
+    let parentDetected = parseAttributes(node, variables, bindingDetails, path);
+    
     if (parentDetected) {
       variables = parentDetected.variables;
     }
 
-    node.childNodes.forEach(child => {
+    let n = 1;
+    node.childNodes.forEach((child, index) => {
       let parsed = [];
 
       if (child.nodeType == Node.TEXT_NODE) {
         parsed = textParser.parse(child.textContent);
         parsed.variables.forEach(variable => {
-          addNodeToVariable(variables, variable, { node: child, type: 'text', structure: parsed.structure })
+          addNodeToVariable(variables, variable, 
+            { 
+              node: child, 
+              type: 'text', 
+              structure: parsed.structure,
+              path: path,
+              index: index
+            });
         });
       } else if (child.nodeType == Node.ELEMENT_NODE) {
-        parseNode(child, variables, bindingDetails);
+        parseNode(child, variables, bindingDetails, `${path}${path == "" ? "" : ">"}${child.nodeName}:nth-child(${n})`);
+        n++;
       }
     });
   }
@@ -123,7 +131,7 @@ function DomParser() {
    */
   this.parse = function (bindingDetails) {
     let variables = new Map();
-    parseNode(bindingDetails.baseNode, variables, bindingDetails);
+    parseNode(bindingDetails.baseNode, variables, bindingDetails, "");
     return variables;
   }
 }

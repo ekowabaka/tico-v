@@ -55,8 +55,8 @@ function ForeachManipulator(entry) {
 
   this.update = function (data) {
     data = data[entry.name];
-    if (!Array.isArray(data)) throw new "For each variable must be an array";
     entry.parent.innerHTML = "";
+    if (!Array.isArray(data)) return;
     for (let row of data) {
       manipulators.forEach(manipulator => manipulator.update(row));
       let newNode = entry.template.cloneNode(true);
@@ -106,6 +106,7 @@ const DomManipulators = {
             break;
           default: throw `Unknown type ${entry.type}`
         }
+        manipulator.variables = entry;
         manipulators.push(manipulator);
       });
     });

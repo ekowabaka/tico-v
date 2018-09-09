@@ -129,7 +129,7 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseAttributes(node, variables, bindingDetails) {
+  function parseAttributes(node, variables, bindingDetails, path) {
     let parentDetected = false;
     let attributeVariables = new Map();
 
@@ -143,12 +143,12 @@ function DomParser() {
           attributeNode = document.createAttribute(match[2]);
           node.setAttributeNode(attributeNode);
           parsed.variables.forEach(variable => {
-            addNodeToVariable(attributeVariables, variable, { node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure })
+            addNodeToVariable(attributeVariables, variable, { node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure, path: path })
           })
         } else if (match[0] === 'sv-true') {
-          addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'truth', name: attribute.value, display: node.style.display })
+          addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'truth', name: attribute.value, display: node.style.display, path: path })
         } else if (match[0] === 'sv-not-true') {
-          addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'not-truth', name: attribute.value, display: node.style.display })
+          addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'not-truth', name: attribute.value, display: node.style.display, path: path })
         } else if (match[0] == 'sv-foreach') {
           parentDetected = { 
             template: node, 
@@ -156,7 +156,6 @@ function DomParser() {
             parent: node.parentNode, 
             name: attribute.value, 
             variables: attributeVariables, 
-            nodes: [] ,
             callback: bindingDetails.onCreate && typeof bindingDetails.onCreate[attribute.value] === 'function' ? 
                         bindingDetails.onCreate[attribute.value] : false
           };
@@ -180,23 +179,32 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseNode(node, variables, bindingDetails) {
-    let parentDetected = parseAttributes(node, variables, bindingDetails);
-
+  function parseNode(node, variables, bindingDetails, path) {
+    let parentDetected = parseAttributes(node, variables, bindingDetails, path);
+    
     if (parentDetected) {
       variables = parentDetected.variables;
     }
 
-    node.childNodes.forEach(child => {
+    let n = 1;
+    node.childNodes.forEach((child, index) => {
       let parsed = [];
 
       if (child.nodeType == Node.TEXT_NODE) {
         parsed = textParser.parse(child.textContent);
         parsed.variables.forEach(variable => {
-          addNodeToVariable(variables, variable, { node: child, type: 'text', structure: parsed.structure })
+          addNodeToVariable(variables, variable, 
+            { 
+              node: child, 
+              type: 'text', 
+              structure: parsed.structure,
+              path: path,
+              index: index
+            });
         });
       } else if (child.nodeType == Node.ELEMENT_NODE) {
-        parseNode(child, variables, bindingDetails);
+        parseNode(child, variables, bindingDetails, `${path}${path == "" ? "" : ">"}${child.nodeName}:nth-child(${n})`);
+        n++;
       }
     });
   }
@@ -208,7 +216,7 @@ function DomParser() {
    */
   this.parse = function (bindingDetails) {
     let variables = new Map();
-    parseNode(bindingDetails.baseNode, variables, bindingDetails);
+    parseNode(bindingDetails.baseNode, variables, bindingDetails, "");
     return variables;
   }
 }
@@ -240,7 +248,6 @@ function TextNodeManipulator(entry) {
 
 function AttributeManipulator(entry) {
   this.update = function (data, node) {
-    console.log(node);
     let final = node || entry.node;
     final.value = renderText(entry.structure, data);
   }
@@ -271,8 +278,8 @@ function ForeachManipulator(entry) {
 
   this.update = function (data) {
     data = data[entry.name];
-    if (!Array.isArray(data)) throw new "For each variable must be an array";
     entry.parent.innerHTML = "";
+    if (!Array.isArray(data)) return;
     for (let row of data) {
       manipulators.forEach(manipulator => manipulator.update(row));
       let newNode = entry.template.cloneNode(true);
@@ -322,6 +329,7 @@ const DomManipulators = {
             break;
           default: throw `Unknown type ${entry.type}`
         }
+        manipulator.variables = entry;
         manipulators.push(manipulator);
       });
     });
@@ -374,12 +382,27 @@ function UpdateHandler(variables, manipulators, node) {
   }
 
   this.set = function (target, name, value) {
+    console.log('set', name, value);
     target[name] = value;
     this.run(target);
   }
 
   this.run = function (target) {
-    manipulators.forEach(manipulator => manipulator.update(target, node));
+    manipulators.forEach(manipulator => {
+      let manipulatedNode = undefined;
+      if(node) {
+        let baseNode = manipulator.variables.path == "" ? node : node.querySelector(manipulator.variables.path);
+        if(manipulator.variables.type == "text") {
+          manipulatedNode = baseNode.childNodes[manipulator.variables.index];
+        } else if (manipulator.variables.type == "attribute") {
+          console.log(manipulator.variables.name);
+          manipulatedNode = baseNode.getAttributeNode(manipulator.variables.name);
+        } else {
+          manipulatedNode = baseNode;
+        }
+      }
+      manipulator.update(target, manipulatedNode)
+    });
   }
 }
 
@@ -408,6 +431,7 @@ function bind(bindingDetails) {
     : bindingDetails.node;
 
   let variables = domparser.parse(bindingDetails);
+  console.log(variables);
   let manipulators = DomManipulators.create(variables);
   return new View(variables, manipulators, bindingDetails);
 }
