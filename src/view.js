@@ -3,6 +3,7 @@ let domparser = new DomParser();
 function ArrayUpdateHandler(entry, manipulator) {
 
   let proxyCache = new WeakMap();
+  let proxiesCreated = new WeakMap();
 
   this.get = function (target, name) {
     if (typeof target[name] === 'function' || typeof target[name] !== 'object') {
@@ -11,12 +12,17 @@ function ArrayUpdateHandler(entry, manipulator) {
 
     let node = entry.parent.children[name];
     if (!proxyCache.has(node)) {
-      proxyCache.set(node, new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name])));
+      let proxy = new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name]));
+      proxyCache.set(node, proxy);
+      proxiesCreated.set(proxy, target[name]);
     }
     return proxyCache.get(node);
   }
 
   this.set = function (target, name, value) {
+    if(proxiesCreated.has(value)) {
+      value = proxiesCreated.get(value);
+    }
     target[name] = value;
     if (name === 'length') {
       for (let i = 0; i < entry.parent.children.length - value; i++) {
@@ -43,7 +49,7 @@ function UpdateHandler(variables, manipulators, node) {
   }
 
   this.set = function (target, name, value) {
-    console.log('set', name, value);
+    console.log(value);
     target[name] = value;
     this.run(target);
   }
@@ -56,7 +62,6 @@ function UpdateHandler(variables, manipulators, node) {
         if(manipulator.variables.type == "text") {
           manipulatedNode = baseNode.childNodes[manipulator.variables.index];
         } else if (manipulator.variables.type == "attribute") {
-          console.log(manipulator.variables.name);
           manipulatedNode = baseNode.getAttributeNode(manipulator.variables.name);
         } else {
           manipulatedNode = baseNode;
@@ -92,7 +97,6 @@ function bind(bindingDetails) {
     : bindingDetails.node;
 
   let variables = domparser.parse(bindingDetails);
-  console.log(variables);
   let manipulators = DomManipulators.create(variables);
   return new View(variables, manipulators, bindingDetails);
 }
