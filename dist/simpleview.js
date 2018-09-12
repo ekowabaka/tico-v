@@ -388,9 +388,9 @@ function UpdateHandler(variables, manipulators, node) {
   }
 
   this.set = function (target, name, value) {
-    console.log(value);
     target[name] = value;
     this.run(target);
+    return true;
   }
 
   this.run = function (target) {
