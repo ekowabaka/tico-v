@@ -1,5 +1,12 @@
 let domparser = new DomParser();
 
+/**
+ * Proxy handler containing the traps for operations on Array Objects
+ *
+ * @param entry
+ * @param manipulator
+ * @constructor
+ */
 function ArrayUpdateHandler(entry, manipulator) {
 
   let proxyCache = new WeakMap();
@@ -82,7 +89,7 @@ function View(variables, manipulators, bindingDetails) {
       dataProxy = new Proxy(newData, updateHandler);
       updateHandler.run(newData);
       if (bindingDetails.onCreate && typeof bindingDetails.onCreate.$default === 'function') {
-        bindingDetails.onCreate.$default(bindingDetails.baseNode);
+        bindingDetails.onCreate.$default(bindingDetails.templateNode);
       }
     }
   });
@@ -91,19 +98,20 @@ function View(variables, manipulators, bindingDetails) {
 /**
  * Bind a view to a set of variables
  */
-function bind(node, data) {
-  baseNode = typeof node === 'string'? document.querySelector(node) : node;
+function bind(template, bindingDetails) {
+  bindingDetails = bindingDetails || {};
+  bindingDetails.templateNode = typeof template === 'string' ? document.querySelector(template) : template;
   let variables = domparser.parse(bindingDetails);
   let manipulators = DomManipulators.create(variables);
   return new View(variables, manipulators, bindingDetails);
 }
 
-let ticov = {
+let tv = {
   bind: bind
 }
 
 if (typeof require === 'function') {
-  module.exports = ticov;
+  module.exports = tv;
 } else {
-  window.ticov = ticov;
+  window.ticov = tv;
 }

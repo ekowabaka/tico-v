@@ -131,7 +131,7 @@ function DomParser() {
    */
   this.parse = function (bindingDetails) {
     let variables = new Map();
-    parseNode(bindingDetails.baseNode, variables, bindingDetails, "");
+    parseNode(bindingDetails.templateNode, variables, bindingDetails, "");
     return variables;
   }
 }
