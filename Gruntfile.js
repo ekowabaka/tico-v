@@ -10,7 +10,7 @@ module.exports = function(grunt) {
           },
           dist: {
               src: js_sources,
-              dest: 'dist/simpleview.js',
+              dest: 'dist/tv.js',
           },
       },
       clean : ['dist', 'build']

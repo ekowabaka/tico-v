@@ -89,7 +89,7 @@
 function DomParser() {
 
   let textParser = new TextParser();
-  let attributeRegexes = ["sv-foreach", "sv-true", "sv-not-true", "(sv-value)-([a-z0-9_\-]+)", "(sv-).*"].map(regex => new RegExp(regex, 'i'));
+  let attributeRegexes = ["tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"].map(regex => new RegExp(regex, 'i'));
   let parentId = Math.random();
 
   /**
@@ -138,18 +138,18 @@ function DomParser() {
       for (let regex of attributeRegexes) {
         let match = regex.exec(attribute.name);
         if (!match) continue;
-        if (match[1] === 'sv-value') {
+        if (match[1] === 'tv-value') {
           parsed = textParser.parse(attribute.value);
           attributeNode = document.createAttribute(match[2]);
           node.setAttributeNode(attributeNode);
           parsed.variables.forEach(variable => {
             addNodeToVariable(attributeVariables, variable, { node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure, path: path })
           })
-        } else if (match[0] === 'sv-true') {
+        } else if (match[0] === 'tv-true') {
           addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'truth', name: attribute.value, display: node.style.display, path: path })
-        } else if (match[0] === 'sv-not-true') {
+        } else if (match[0] === 'tv-not-true') {
           addNodeToVariable(attributeVariables, attribute.value, { node: node, type: 'not-truth', name: attribute.value, display: node.style.display, path: path })
-        } else if (match[0] == 'sv-foreach') {
+        } else if (match[0] == 'tv-foreach') {
           parentDetected = { 
             template: node, 
             type: 'foreach', 
@@ -430,23 +430,20 @@ function View(variables, manipulators, bindingDetails) {
 /**
  * Bind a view to a set of variables
  */
-function bind(bindingDetails) {
-  bindingDetails.baseNode = typeof bindingDetails.node === 'string'
-    ? document.querySelector(bindingDetails.node)
-    : bindingDetails.node;
-
+function bind(node, data) {
+  baseNode = typeof node === 'string'? document.querySelector(node) : node;
   let variables = domparser.parse(bindingDetails);
   let manipulators = DomManipulators.create(variables);
   return new View(variables, manipulators, bindingDetails);
 }
 
-let simpleview = {
+let ticov = {
   bind: bind
 }
 
 if (typeof require === 'function') {
-  module.exports = simpleview;
+  module.exports = ticov;
 } else {
-  window.simpleview = simpleview;
+  window.ticov = ticov;
 }
 })();
