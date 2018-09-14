@@ -91,22 +91,19 @@ function View(variables, manipulators, bindingDetails) {
 /**
  * Bind a view to a set of variables
  */
-function bind(bindingDetails) {
-  bindingDetails.baseNode = typeof bindingDetails.node === 'string'
-    ? document.querySelector(bindingDetails.node)
-    : bindingDetails.node;
-
+function bind(node, data) {
+  baseNode = typeof node === 'string'? document.querySelector(node) : node;
   let variables = domparser.parse(bindingDetails);
   let manipulators = DomManipulators.create(variables);
   return new View(variables, manipulators, bindingDetails);
 }
 
-let simpleview = {
+let ticov = {
   bind: bind
 }
 
 if (typeof require === 'function') {
-  module.exports = simpleview;
+  module.exports = ticov;
 } else {
-  window.simpleview = simpleview;
+  window.ticov = ticov;
 }
