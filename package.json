@@ -1,7 +1,7 @@
 {
-  "name": "simpleview",
+  "name": "tico-v",
   "version": "0.1.0",
-  "description": "Simple views",
+  "description": "Lightweight databinding and templating for Javascript",
   "directories": {
     "test": "test"
   },
