@@ -38,6 +38,7 @@ Templates for tiCo-v are written directly into the HTML markup of the page you. 
             <span>This update is {{verified?"":"not"}} verified<span>
         </li>
     </ul>
+    <div tv-not-true="updates">There are currently no updates</div>
 </div>
 ````
 
@@ -49,10 +50,12 @@ Conditional substitutions can also involve literal text such as ``{{truth ? "whe
 ### Special tv attributes
 Prefixing any attribute with `tv-value-` causes that attribute to be later added with its value parsed for text substitutions. For example adding the attribute `tv-value-src='{{avater_img?"default-avatar.png"}}'` to an `img` tag will cause tiCo-v to add an `src` attribute whose value is based on the evaluation of the substitution `{{avater_img?"default-avatar.png"}}`.
 
-Apart from the 
+You can hide and show DOM nodes using the `tv-true` and `tv-not-true` attributes. A DOM node with the `tv-true` attribute will be visible if the variable represented by the value of the attribute is truthy. Likewise, a DOM node with `tv-not-true` will be visible only when the value of the variable is false.
+
+The `tv-foreach` attribute helps with repeating nodes.
 
 ## Binding Variables
-To bind an object to a template such as the one above, we you use:
+To bind an object to a template such as the one above, you can use:
 
 ````js
 let view = tv.bind("#profile");
@@ -66,3 +69,5 @@ view.data = {
     ]
 }
 ````
+
+And that's it!
