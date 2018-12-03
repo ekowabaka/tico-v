@@ -337,6 +337,10 @@ const DomManipulators = {
     return manipulators;
   }
 }
+/**
+ * Instance of DomParser used for parsing views
+ * @type {DomParser}
+ */
 let domparser = new DomParser();
 
 /**
@@ -348,9 +352,24 @@ let domparser = new DomParser();
  */
 function ArrayUpdateHandler(entry, manipulator) {
 
+  /**
+   * Keeps a weak map cache of proxies attached to dom nodes so they die along with their attached node.
+   * @type {WeakMap<Object, any>}
+   */
   let proxyCache = new WeakMap();
+
+  /**
+   * Keeps a list of all the proxies created so they are not added back to the object or recreated in anyway.
+   * @type {WeakMap<Object, any>}
+   */
   let proxiesCreated = new WeakMap();
 
+  /**
+   * A trap for returning values from objects or proxies of objects from other objects.
+   * @param target
+   * @param name
+   * @returns {*}
+   */
   this.get = function (target, name) {
     if (typeof target[name] === 'function' || typeof target[name] !== 'object') {
       return target[name];
@@ -365,6 +384,13 @@ function ArrayUpdateHandler(entry, manipulator) {
     return proxyCache.get(node);
   }
 
+  /**
+   * A trap for setting values into objects.
+   * @param target
+   * @param name
+   * @param value
+   * @returns {boolean}
+   */
   this.set = function (target, name, value) {
     if(proxiesCreated.has(value)) {
       value = proxiesCreated.get(value);
