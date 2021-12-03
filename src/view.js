@@ -147,5 +147,5 @@ let tv = {
 if (typeof require === 'function') {
   module.exports = tv;
 } else {
-  window.ticov = tv;
+  window.tv = tv;
 }

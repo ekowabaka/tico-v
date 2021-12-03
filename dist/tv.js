@@ -84,10 +84,13 @@
     }
 }
 /**
- * 
+ * Parses arguments and other tico-v items from DOM element nodes.
  */
 function DomParser() {
 
+  /**
+   * Parses items from tico-v text nodes.
+   */
   let textParser = new TextParser();
   let attributeRegexes = ["tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"].map(regex => new RegExp(regex, 'i'));
   let parentId = Math.random();
@@ -365,7 +368,7 @@ function ArrayUpdateHandler(entry, manipulator) {
   let proxiesCreated = new WeakMap();
 
   /**
-   * A trap for returning values from objects or proxies of objects from other objects.
+   * A trap for returning values from arrays or proxies of objects from the array.
    * @param target
    * @param name
    * @returns {*}
@@ -385,7 +388,7 @@ function ArrayUpdateHandler(entry, manipulator) {
   }
 
   /**
-   * A trap for setting values into objects.
+   * A trap for setting values into the array.
    * @param target
    * @param name
    * @param value
@@ -407,6 +410,14 @@ function ArrayUpdateHandler(entry, manipulator) {
   }
 }
 
+/**
+ * A proxy handler containing traps for other objects
+ *
+ * @param variables
+ * @param manipulators
+ * @param node
+ * @constructor
+ */
 function UpdateHandler(variables, manipulators, node) {
   this.get = function (target, name) {
     if (typeof target[name] === 'object' && Array.isArray(target[name]) && variables.get(name)[0].type === "foreach") {
@@ -478,6 +489,6 @@ let tv = {
 if (typeof require === 'function') {
   module.exports = tv;
 } else {
-  window.ticov = tv;
+  window.tv = tv;
 }
 })();

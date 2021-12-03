@@ -1,8 +1,11 @@
 /**
- * 
+ * Parses arguments and other tico-v items from DOM element nodes.
  */
 function DomParser() {
 
+  /**
+   * Parses items from tico-v text nodes.
+   */
   let textParser = new TextParser();
   let attributeRegexes = ["tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"].map(regex => new RegExp(regex, 'i'));
   let parentId = Math.random();
