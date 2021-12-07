@@ -53,7 +53,7 @@ function ArrayUpdateHandler(entry, manipulator) {
    * @returns {boolean}
    */
   this.set = function (target, name, value) {
-    if(proxiesCreated.has(value)) {
+    if (proxiesCreated.has(value)) {
       value = proxiesCreated.get(value);
     }
     target[name] = value;
@@ -98,9 +98,9 @@ function UpdateHandler(variables, manipulators, node) {
   this.run = function (target) {
     manipulators.forEach(manipulator => {
       let manipulatedNode = undefined;
-      if(node) {
+      if (node) {
         let baseNode = manipulator.variables.path == "" ? node : node.querySelector(manipulator.variables.path);
-        if(manipulator.variables.type == "text") {
+        if (manipulator.variables.type == "text") {
           manipulatedNode = baseNode.childNodes[manipulator.variables.index];
         } else if (manipulator.variables.type == "attribute") {
           manipulatedNode = baseNode.getAttributeNode(manipulator.variables.name);
@@ -113,7 +113,7 @@ function UpdateHandler(variables, manipulators, node) {
   }
 }
 
-function View(variables, manipulators, bindingDetails) {
+function View(variables, nodes, manipulators, bindingDetails) {
   let dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators));
 
   Object.defineProperty(this, 'data', {
@@ -127,6 +127,34 @@ function View(variables, manipulators, bindingDetails) {
       }
     }
   });
+
+  const attachEvent = function(node, event, callback) {
+    if(nodes.has(node) && nodes.get(node).type == "foreach") {
+      nodes.get(node).events.push({name: event, callback: callback, path: undefined});
+    }  
+  }
+
+  /**
+   * A selector that picks items from within the template.
+   * Our ultimate goal with this function is to be able to trap addEventListener calls on items within the template.
+   * We are particularly interested in the event listeners that are applied to foreach items and their children.
+   *
+   * @param {string} selector 
+   */
+  this.querySelector = function (selector) {
+    const node = bindingDetails.templateNode.querySelector(selector);
+    // check if node has a foreach parent
+  }
+
+  /**
+   * Add events directly to the template node.
+
+   * @param {Event} event 
+   * @param {CallableFunction} callback 
+   */
+  this.addEventListener = function (event, callback) {
+    attachEvent(bindingDetails.templateNode, event, callback);
+  }
 }
 
 /**
@@ -135,9 +163,19 @@ function View(variables, manipulators, bindingDetails) {
 function bind(template, bindingDetails) {
   bindingDetails = bindingDetails || {};
   bindingDetails.templateNode = typeof template === 'string' ? document.querySelector(template) : template;
-  let variables = domparser.parse(bindingDetails);
-  let manipulators = DomManipulators.create(variables);
-  return new View(variables, manipulators, bindingDetails);
+  if (bindingDetails.templateNode) {
+    const variables = domparser.parse(bindingDetails);
+    const manipulators = DomManipulators.create(variables);
+    const nodes = new Map();
+    variables.forEach((value, key) => {
+      value.forEach(variable => {
+        nodes.set(variable.template, variable)
+      });
+    })
+    return new View(variables, nodes, manipulators, bindingDetails);
+  } else {
+    throw new Error("Could not find template node");
+  }
 }
 
 let tv = {
@@ -147,5 +185,5 @@ let tv = {
 if (typeof require === 'function') {
   module.exports = tv;
 } else {
-  window.ticov = tv;
+  window.tv = tv;
 }

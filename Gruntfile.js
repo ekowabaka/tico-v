@@ -13,10 +13,21 @@ module.exports = function(grunt) {
               dest: 'dist/tv.js',
           },
       },
-      clean : ['dist', 'build']
+      clean : ['dist', 'build'],
+      watch: { 
+        scripts: {
+          files: js_sources,
+          tasks: ['concat'],
+          options: {
+            spawn: false,
+          },
+        },
+      }
   });
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-concat');
+  grunt.loadNpmTasks('grunt-contrib-watch');
+
   grunt.registerTask('default', ['concat']);
   grunt.registerTask('build', ['concat'])
 }

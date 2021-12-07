@@ -1,5 +1,5 @@
 /**
- * 
+ * Parses dom nodes for those with supported tv-* attributes.
  */
 function DomParser() {
 
@@ -71,6 +71,7 @@ function DomParser() {
             parent: node.parentNode, 
             name: attribute.value, 
             variables: attributeVariables, 
+            events: [],
             callback: bindingDetails.onCreate && typeof bindingDetails.onCreate[attribute.value] === 'function' ? 
                         bindingDetails.onCreate[attribute.value] : false
           };
@@ -95,7 +96,7 @@ function DomParser() {
    * @param {Map} variables 
    */
   function parseNode(node, variables, bindingDetails, path) {
-    let parentDetected = parseAttributes(node, variables, bindingDetails, path);
+    const parentDetected = parseAttributes(node, variables, bindingDetails, path);
     
     if (parentDetected) {
       variables = parentDetected.variables;
@@ -130,7 +131,7 @@ function DomParser() {
    * @param {Node} node 
    */
   this.parse = function (bindingDetails) {
-    let variables = new Map();
+    const variables = new Map();
     parseNode(bindingDetails.templateNode, variables, bindingDetails, "");
     return variables;
   }

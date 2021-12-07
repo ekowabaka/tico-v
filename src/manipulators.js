@@ -1,4 +1,13 @@
 /**
+ * manipulators.js
+ * 
+ * Tico-V directly manipulates the DOM with the manipulators defined in this file. Each of these manipulators can
+ * be attached to particular tico-v elements within the DOM. Whenever data changes, manipulators are called to update
+ * the DOM.
+ */
+
+/**
+ * A utility function for rendering a text string when given a the parsed tree genereted by the text parser.
  * 
  * @param {Array} structure 
  * @param {Object} data 
@@ -15,6 +24,11 @@ function renderText(structure, data) {
   }, "");
 }
 
+/**
+ * Responsible for manipulating text nodes in the DOM.
+ * 
+ * @param {Object} entry 
+ */
 function TextNodeManipulator(entry) {
 
   this.update = function (data, node) {
@@ -23,6 +37,11 @@ function TextNodeManipulator(entry) {
   }
 }
 
+/**
+ * Responsible for manipulating the values of attributes on DOM elements.
+ * 
+ * @param {Object} entry 
+ */
 function AttributeManipulator(entry) {
   this.update = function (data, node) {
     let final = node || entry.node;
@@ -30,6 +49,12 @@ function AttributeManipulator(entry) {
   }
 }
 
+/**
+ * Responsible for showing or hiding nodes based on the data passed.
+ * 
+ * @param {Object} entry 
+ * @param {boolean} invert 
+ */
 function TruthAttrubuteManipulator(entry, invert) {
 
   this.update = function (data, node) {
@@ -42,6 +67,11 @@ function TruthAttrubuteManipulator(entry, invert) {
   }
 }
 
+/**
+ * Responsible for rendering repitions for array based data.
+ * 
+ * @param {Object} entry 
+ */
 function ForeachManipulator(entry) {
 
   let manipulators = DomManipulators.create(entry.variables);
@@ -53,6 +83,16 @@ function ForeachManipulator(entry) {
     }
   }
 
+  function setupEvents(node) {
+    entry.events.forEach(event => {
+      if (event.path) {
+        node.querySelector(event.path).addEventListener(event.name, event.callback);
+      } else {
+        node.addEventListener(event.name, event.callback);
+      }
+    })
+  }
+
   this.update = function (data) {
     data = data[entry.name];
     entry.parent.innerHTML = "";
@@ -60,6 +100,7 @@ function ForeachManipulator(entry) {
     for (let row of data) {
       manipulators.forEach(manipulator => manipulator.update(row));
       let newNode = entry.template.cloneNode(true);
+      setupEvents(newNode);
       entry.parent.appendChild(newNode);
       runCallback(newNode);
     }
@@ -68,6 +109,7 @@ function ForeachManipulator(entry) {
   this.set = function (key, data) {
     manipulators.forEach(manipulator => manipulator.update(data));
     let newNode = entry.template.cloneNode(true);
+    setupEvents(newNode);
     if (key == entry.parent.children.length) {
       entry.parent.appendChild(newNode);
     } else {
@@ -78,7 +120,7 @@ function ForeachManipulator(entry) {
 }
 
 /**
- * Manipulate the DOM
+ * A factory for creating manipulators based on the type of the entry.
  */
 const DomManipulators = {
   create: function (variables) {
