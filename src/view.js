@@ -158,7 +158,7 @@ function View(variables, nodes, manipulators, bindingDetails) {
 }
 
 /**
- * Bind a view to a set of variables
+ * Bind a view to a mapping of its internal variables.
  */
 function bind(template, bindingDetails) {
   bindingDetails = bindingDetails || {};
