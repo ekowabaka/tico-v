@@ -77,12 +77,6 @@ function ForeachManipulator(entry) {
   let manipulators = DomManipulators.create(entry.variables);
   entry.manipulators = manipulators;
 
-  function runCallback(node) {
-    if(entry.callback) {
-      entry.callback(node);
-    }
-  }
-
   function setupEvents(node) {
     entry.events.forEach(event => {
       if (event.path) {
@@ -98,11 +92,10 @@ function ForeachManipulator(entry) {
     entry.parent.innerHTML = "";
     if (!Array.isArray(data)) return;
     for (let row of data) {
+      console.log(row, manipulators, entry.parent, entry.template);
       manipulators.forEach(manipulator => manipulator.update(row));
-      let newNode = entry.template.cloneNode(true);
-      setupEvents(newNode);
-      entry.parent.appendChild(newNode);
-      runCallback(newNode);
+      entry.template.forEach(x => entry.parent.appendChild(x.cloneNode(true)));
+      //setupEvents(newNode);
     }
   }
 
@@ -124,7 +117,6 @@ function ForeachManipulator(entry) {
  */
 const DomManipulators = {
   create: function (variables) {
-
     let manipulators = [];
     let manipulator;
 

@@ -15,13 +15,8 @@ module.exports = function(grunt) {
       },
       clean : ['dist', 'build'],
       watch: { 
-        scripts: {
-          files: js_sources,
-          tasks: ['concat'],
-          options: {
-            spawn: false,
-          },
-        },
+        files: js_sources,
+        tasks: ['concat']
       }
   });
   grunt.loadNpmTasks('grunt-contrib-uglify');
@@ -29,5 +24,5 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-watch');
 
   grunt.registerTask('default', ['concat']);
-  grunt.registerTask('build', ['concat'])
+  grunt.registerTask('build', ['concat']);
 }

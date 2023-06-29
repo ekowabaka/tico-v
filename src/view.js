@@ -172,6 +172,7 @@ function bind(template, bindingDetails) {
         nodes.set(variable.template, variable)
       });
     })
+    //console.log(variables, nodes, manipulators, bindingDetails);
     return new View(variables, nodes, manipulators, bindingDetails);
   } else {
     throw new Error("Could not find template node");
