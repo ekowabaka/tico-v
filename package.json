@@ -11,11 +11,9 @@
   "author": "Ekow Abaka",
   "license": "MIT",
   "devDependencies": {
-    "grunt": "^1.0.3",
-    "grunt-contrib-concat": "^1.0.1",
-    "grunt-contrib-uglify": "^3.4.0"
-  },
-  "dependencies": {
-    "grunt-contrib-watch": "^1.1.0"
+    "grunt": "*",
+    "grunt-contrib-concat": "*",
+    "grunt-contrib-uglify": "*",
+    "grunt-contrib-watch": "*"
   }
 }
