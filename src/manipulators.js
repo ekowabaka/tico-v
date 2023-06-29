@@ -72,43 +72,40 @@ function TruthAttrubuteManipulator(entry, invert) {
  * 
  * @param {Object} entry 
  */
-function ForeachManipulator(entry) {
+function ForeachManipulator(entry, bindingDetails) {
+
+  function sendCallback(node, data) {
+    if(bindingDetails.observers.has(entry.id) && node.nodeType === Node.ELEMENT_NODE) {
+      bindingDetails.observers.get(entry.id).forEach(x => x(node, data));
+    }
+  }
 
   let manipulators = DomManipulators.create(entry.variables);
   entry.manipulators = manipulators;
-
-  function setupEvents(node) {
-    entry.events.forEach(event => {
-      if (event.path) {
-        node.querySelector(event.path).addEventListener(event.name, event.callback);
-      } else {
-        node.addEventListener(event.name, event.callback);
-      }
-    })
-  }
 
   this.update = function (data) {
     data = data[entry.name];
     entry.parent.innerHTML = "";
     if (!Array.isArray(data)) return;
     for (let row of data) {
-      console.log(row, manipulators, entry.parent, entry.template);
       manipulators.forEach(manipulator => manipulator.update(row));
-      entry.template.forEach(x => entry.parent.appendChild(x.cloneNode(true)));
-      //setupEvents(newNode);
+      entry.template.forEach(x => {
+        let newNode = x.cloneNode(true);
+        entry.parent.appendChild(newNode);
+        sendCallback(newNode, row);
+      });
     }
   }
 
   this.set = function (key, data) {
     manipulators.forEach(manipulator => manipulator.update(data));
     let newNode = entry.template.cloneNode(true);
-    setupEvents(newNode);
     if (key == entry.parent.children.length) {
       entry.parent.appendChild(newNode);
     } else {
       entry.parent.replaceChild(newNode, entry.parent.children[key]);
     }
-    runCallback(newNode);
+    sendCallback(newNode, data);
   }
 }
 
@@ -116,7 +113,7 @@ function ForeachManipulator(entry) {
  * A factory for creating manipulators based on the type of the entry.
  */
 const DomManipulators = {
-  create: function (variables) {
+  create: function (variables, bindingDetails) {
     let manipulators = [];
     let manipulator;
 
@@ -136,7 +133,7 @@ const DomManipulators = {
             manipulator = new TruthAttrubuteManipulator(entry, true);
             break;
           case 'foreach':
-            manipulator = new ForeachManipulator(entry);
+            manipulator = new ForeachManipulator(entry, bindingDetails);
             break;
           default: throw `Unknown type ${entry.type}`
         }

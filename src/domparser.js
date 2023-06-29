@@ -44,12 +44,12 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseAttributes(node, variables, path) {
+  function parseAttributes(node, variables, path, bindingDetails) {
     let parentDetected = false;
     let attributeVariables = new Map();
+    let id;
 
     for (const attribute of node.attributes) {
-      console.log(attribute)
       for (let regex of attributeRegexes) {
         let match = regex.exec(attribute.name);
         if (!match) continue;
@@ -79,13 +79,15 @@ function DomParser() {
           parentDetected = { 
             template: node.childNodes,
             type: 'foreach', 
-            parent: node,//.parentNode, 
+            parent: node,
             name: attribute.value, 
-            variables: attributeVariables, 
-            events: []
+            variables: attributeVariables,
+            id: null
           };
-          
           addNodeToVariable(variables, attribute.value, parentDetected)
+        } else if (match[0] == "tv-id") {
+          id = attribute.value;
+          bindingDetails.observers.set(attribute.value, []);
         }
         break;
       }
@@ -93,6 +95,8 @@ function DomParser() {
 
     if(!parentDetected) {
       mergeVariables(variables, attributeVariables);
+    } else if (parentDetected && id) {
+      parentDetected['id'] = id;
     }
 
     return parentDetected;
@@ -105,8 +109,8 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseNode(node, variables, path) {
-    const parentDetected = parseAttributes(node, variables, path);
+  function parseNode(node, variables, path, bindingDetails) {
+    const parentDetected = parseAttributes(node, variables, path, bindingDetails);
     let children;
     
     if (parentDetected) {
@@ -134,7 +138,7 @@ function DomParser() {
         });
       } else if (child.nodeType == Node.ELEMENT_NODE) {
         const prefix = parentDetected ? "" : `${path}${path == "" ? "" : ">"}`;
-        parseNode(child, variables, `${prefix}${child.nodeName}:nth-child(${n})`);
+        parseNode(child, variables, `${prefix}${child.nodeName}:nth-child(${n})`, bindingDetails);
         n++;
       }
     });
@@ -151,7 +155,7 @@ function DomParser() {
    */
   this.parse = function (bindingDetails) {
     const variables = new Map();
-    parseNode(bindingDetails.templateNode, variables, "");
+    parseNode(bindingDetails.templateNode, variables, "", bindingDetails);
     return variables;
   }
 }

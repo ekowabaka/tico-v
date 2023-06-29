@@ -4,6 +4,7 @@
  */
 let domparser = new DomParser();
 
+
 /**
  * Proxy handler containing the traps for operations on Array Objects
  *
@@ -113,67 +114,57 @@ function UpdateHandler(variables, manipulators, node) {
   }
 }
 
-function View(variables, nodes, manipulators, bindingDetails) {
-  let dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators));
 
-  Object.defineProperty(this, 'data', {
-    get: () => dataProxy,
-    set: newData => {
-      let updateHandler = new UpdateHandler(variables, manipulators);
-      dataProxy = new Proxy(newData, updateHandler);
-      updateHandler.run(newData);
-      if (bindingDetails.onCreate && typeof bindingDetails.onCreate.$default === 'function') {
-        bindingDetails.onCreate.$default(bindingDetails.templateNode);
-      }
+class View {
+
+  #dataProxy
+  #variables
+  #manipulators;
+  #bindingDetails;
+
+  constructor (variables, manipulators, bindingDetails) {
+    this.#dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators))
+    this.#variables = variables;
+    this.#manipulators = manipulators;
+    this.#bindingDetails = bindingDetails;
+  }
+
+  set data(newData) {
+    let updateHandler = new UpdateHandler(this.#variables, this.#manipulators);
+    this.#dataProxy = new Proxy(newData, updateHandler);
+    updateHandler.run(newData);
+  }
+
+  get data() {
+    return this.#dataProxy;
+  }
+
+  addObserver(id, callback) {
+    if(this.#bindingDetails.observers.has(id)) {
+      this.#bindingDetails.observers.get(id).push(callback);
     }
-  });
-
-  const attachEvent = function(node, event, callback) {
-    if(nodes.has(node) && nodes.get(node).type == "foreach") {
-      nodes.get(node).events.push({name: event, callback: callback, path: undefined});
-    }  
-  }
-
-  /**
-   * A selector that picks items from within the template.
-   * Our ultimate goal with this function is to be able to trap addEventListener calls on items within the template.
-   * We are particularly interested in the event listeners that are applied to foreach items and their children.
-   *
-   * @param {string} selector 
-   */
-  this.querySelector = function (selector) {
-    const node = bindingDetails.templateNode.querySelector(selector);
-    // check if node has a foreach parent
-  }
-
-  /**
-   * Add events directly to the template node.
-
-   * @param {Event} event 
-   * @param {CallableFunction} callback 
-   */
-  this.addEventListener = function (event, callback) {
-    attachEvent(bindingDetails.templateNode, event, callback);
   }
 }
 
 /**
  * Bind a view to a mapping of its internal variables.
  */
-function bind(template, bindingDetails) {
-  bindingDetails = bindingDetails || {};
+function bind(template) {
+  const bindingDetails = {
+    //namedNodes: new Map()
+    observers: new Map()
+  };
   bindingDetails.templateNode = typeof template === 'string' ? document.querySelector(template) : template;
   if (bindingDetails.templateNode) {
     const variables = domparser.parse(bindingDetails);
-    const manipulators = DomManipulators.create(variables);
+    const manipulators = DomManipulators.create(variables, bindingDetails);
     const nodes = new Map();
     variables.forEach((value, key) => {
       value.forEach(variable => {
         nodes.set(variable.template, variable)
       });
     })
-    //console.log(variables, nodes, manipulators, bindingDetails);
-    return new View(variables, nodes, manipulators, bindingDetails);
+    return new View(variables, manipulators, bindingDetails);
   } else {
     throw new Error("Could not find template node");
   }

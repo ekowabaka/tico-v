@@ -126,12 +126,12 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseAttributes(node, variables, path) {
+  function parseAttributes(node, variables, path, bindingDetails) {
     let parentDetected = false;
     let attributeVariables = new Map();
+    let id;
 
     for (const attribute of node.attributes) {
-      console.log(attribute)
       for (let regex of attributeRegexes) {
         let match = regex.exec(attribute.name);
         if (!match) continue;
@@ -161,13 +161,15 @@ function DomParser() {
           parentDetected = { 
             template: node.childNodes,
             type: 'foreach', 
-            parent: node,//.parentNode, 
+            parent: node,
             name: attribute.value, 
-            variables: attributeVariables, 
-            events: []
+            variables: attributeVariables,
+            id: null
           };
-          
           addNodeToVariable(variables, attribute.value, parentDetected)
+        } else if (match[0] == "tv-id") {
+          id = attribute.value;
+          bindingDetails.observers.set(attribute.value, []);
         }
         break;
       }
@@ -175,6 +177,8 @@ function DomParser() {
 
     if(!parentDetected) {
       mergeVariables(variables, attributeVariables);
+    } else if (parentDetected && id) {
+      parentDetected['id'] = id;
     }
 
     return parentDetected;
@@ -187,8 +191,8 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseNode(node, variables, path) {
-    const parentDetected = parseAttributes(node, variables, path);
+  function parseNode(node, variables, path, bindingDetails) {
+    const parentDetected = parseAttributes(node, variables, path, bindingDetails);
     let children;
     
     if (parentDetected) {
@@ -216,7 +220,7 @@ function DomParser() {
         });
       } else if (child.nodeType == Node.ELEMENT_NODE) {
         const prefix = parentDetected ? "" : `${path}${path == "" ? "" : ">"}`;
-        parseNode(child, variables, `${prefix}${child.nodeName}:nth-child(${n})`);
+        parseNode(child, variables, `${prefix}${child.nodeName}:nth-child(${n})`, bindingDetails);
         n++;
       }
     });
@@ -233,7 +237,7 @@ function DomParser() {
    */
   this.parse = function (bindingDetails) {
     const variables = new Map();
-    parseNode(bindingDetails.templateNode, variables, "");
+    parseNode(bindingDetails.templateNode, variables, "", bindingDetails);
     return variables;
   }
 }
@@ -313,43 +317,40 @@ function TruthAttrubuteManipulator(entry, invert) {
  * 
  * @param {Object} entry 
  */
-function ForeachManipulator(entry) {
+function ForeachManipulator(entry, bindingDetails) {
+
+  function sendCallback(node, data) {
+    if(bindingDetails.observers.has(entry.id) && node.nodeType === Node.ELEMENT_NODE) {
+      bindingDetails.observers.get(entry.id).forEach(x => x(node, data));
+    }
+  }
 
   let manipulators = DomManipulators.create(entry.variables);
   entry.manipulators = manipulators;
-
-  function setupEvents(node) {
-    entry.events.forEach(event => {
-      if (event.path) {
-        node.querySelector(event.path).addEventListener(event.name, event.callback);
-      } else {
-        node.addEventListener(event.name, event.callback);
-      }
-    })
-  }
 
   this.update = function (data) {
     data = data[entry.name];
     entry.parent.innerHTML = "";
     if (!Array.isArray(data)) return;
     for (let row of data) {
-      console.log(row, manipulators, entry.parent, entry.template);
       manipulators.forEach(manipulator => manipulator.update(row));
-      entry.template.forEach(x => entry.parent.appendChild(x.cloneNode(true)));
-      //setupEvents(newNode);
+      entry.template.forEach(x => {
+        let newNode = x.cloneNode(true);
+        entry.parent.appendChild(newNode);
+        sendCallback(newNode, row);
+      });
     }
   }
 
   this.set = function (key, data) {
     manipulators.forEach(manipulator => manipulator.update(data));
     let newNode = entry.template.cloneNode(true);
-    setupEvents(newNode);
     if (key == entry.parent.children.length) {
       entry.parent.appendChild(newNode);
     } else {
       entry.parent.replaceChild(newNode, entry.parent.children[key]);
     }
-    runCallback(newNode);
+    sendCallback(newNode, data);
   }
 }
 
@@ -357,7 +358,7 @@ function ForeachManipulator(entry) {
  * A factory for creating manipulators based on the type of the entry.
  */
 const DomManipulators = {
-  create: function (variables) {
+  create: function (variables, bindingDetails) {
     let manipulators = [];
     let manipulator;
 
@@ -377,7 +378,7 @@ const DomManipulators = {
             manipulator = new TruthAttrubuteManipulator(entry, true);
             break;
           case 'foreach':
-            manipulator = new ForeachManipulator(entry);
+            manipulator = new ForeachManipulator(entry, bindingDetails);
             break;
           default: throw `Unknown type ${entry.type}`
         }
@@ -394,6 +395,7 @@ const DomManipulators = {
  * @type {DomParser}
  */
 let domparser = new DomParser();
+
 
 /**
  * Proxy handler containing the traps for operations on Array Objects
@@ -504,67 +506,57 @@ function UpdateHandler(variables, manipulators, node) {
   }
 }
 
-function View(variables, nodes, manipulators, bindingDetails) {
-  let dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators));
 
-  Object.defineProperty(this, 'data', {
-    get: () => dataProxy,
-    set: newData => {
-      let updateHandler = new UpdateHandler(variables, manipulators);
-      dataProxy = new Proxy(newData, updateHandler);
-      updateHandler.run(newData);
-      if (bindingDetails.onCreate && typeof bindingDetails.onCreate.$default === 'function') {
-        bindingDetails.onCreate.$default(bindingDetails.templateNode);
-      }
+class View {
+
+  #dataProxy
+  #variables
+  #manipulators;
+  #bindingDetails;
+
+  constructor (variables, manipulators, bindingDetails) {
+    this.#dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators))
+    this.#variables = variables;
+    this.#manipulators = manipulators;
+    this.#bindingDetails = bindingDetails;
+  }
+
+  set data(newData) {
+    let updateHandler = new UpdateHandler(this.#variables, this.#manipulators);
+    this.#dataProxy = new Proxy(newData, updateHandler);
+    updateHandler.run(newData);
+  }
+
+  get data() {
+    return this.#dataProxy;
+  }
+
+  addObserver(id, callback) {
+    if(this.#bindingDetails.observers.has(id)) {
+      this.#bindingDetails.observers.get(id).push(callback);
     }
-  });
-
-  const attachEvent = function(node, event, callback) {
-    if(nodes.has(node) && nodes.get(node).type == "foreach") {
-      nodes.get(node).events.push({name: event, callback: callback, path: undefined});
-    }  
-  }
-
-  /**
-   * A selector that picks items from within the template.
-   * Our ultimate goal with this function is to be able to trap addEventListener calls on items within the template.
-   * We are particularly interested in the event listeners that are applied to foreach items and their children.
-   *
-   * @param {string} selector 
-   */
-  this.querySelector = function (selector) {
-    const node = bindingDetails.templateNode.querySelector(selector);
-    // check if node has a foreach parent
-  }
-
-  /**
-   * Add events directly to the template node.
-
-   * @param {Event} event 
-   * @param {CallableFunction} callback 
-   */
-  this.addEventListener = function (event, callback) {
-    attachEvent(bindingDetails.templateNode, event, callback);
   }
 }
 
 /**
  * Bind a view to a mapping of its internal variables.
  */
-function bind(template, bindingDetails) {
-  bindingDetails = bindingDetails || {};
+function bind(template) {
+  const bindingDetails = {
+    //namedNodes: new Map()
+    observers: new Map()
+  };
   bindingDetails.templateNode = typeof template === 'string' ? document.querySelector(template) : template;
   if (bindingDetails.templateNode) {
     const variables = domparser.parse(bindingDetails);
-    const manipulators = DomManipulators.create(variables);
+    const manipulators = DomManipulators.create(variables, bindingDetails);
     const nodes = new Map();
     variables.forEach((value, key) => {
       value.forEach(variable => {
         nodes.set(variable.template, variable)
       });
     })
-    //console.log(variables, nodes, manipulators, bindingDetails);
-    return new View(variables, nodes, manipulators, bindingDetails);
+    return new View(variables, manipulators, bindingDetails);
   } else {
     throw new Error("Could not find template node");
   }

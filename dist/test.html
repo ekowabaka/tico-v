@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="tv.js"></script>
+        <script>
+            const data = {
+                code: [
+                    {id: "1", code: "Hello World 1"},
+                    {id: "2", code: "Hello World 2"},
+                    {id: "3", code: "Hello World 3"},
+                ]
+            };
+            window.addEventListener('load', function() {
+                view = tv.bind(document.getElementById("wrapper"));
+                view.addObserver("lis", x => {
+                    console.log(x)
+                });
+                view.data = data;
+            });
+        </script>
+    </head>
+    <body>
+        <div id="wrapper" tv-value>
+            <ul tv-id="lis" tv-foreach="code">
+                <li>{{id}}</li>
+            </ul>
+            <ol tv-id="ols" tv-foreach="code">
+                <li tv-value-id="{{id}}" tv-value-class='test {{ id ? "Hi"}}''>{{code}}</li>
+            </ol>    
+        </div>
+    </body>
+</html>
