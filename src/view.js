@@ -151,7 +151,6 @@ class View {
  */
 function bind(template) {
   const bindingDetails = {
-    //namedNodes: new Map()
     observers: new Map()
   };
   bindingDetails.templateNode = typeof template === 'string' ? document.querySelector(template) : template;
