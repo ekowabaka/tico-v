@@ -75,6 +75,9 @@ function TruthAttrubuteManipulator(entry, invert) {
 function ForeachManipulator(entry, bindingDetails) {
 
   function sendCallback(node, data) {
+    if (!bindingDetails.observers.has(entry.id)) {
+      return;
+    }
     bindingDetails.observers.get(entry.id).forEach(x => x(node, data));
   }
 
