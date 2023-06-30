@@ -320,9 +320,7 @@ function TruthAttrubuteManipulator(entry, invert) {
 function ForeachManipulator(entry, bindingDetails) {
 
   function sendCallback(node, data) {
-    if(bindingDetails.observers.has(entry.id) && node.nodeType === Node.ELEMENT_NODE) {
-      bindingDetails.observers.get(entry.id).forEach(x => x(node, data));
-    }
+    bindingDetails.observers.get(entry.id).forEach(x => x(node, data));
   }
 
   let manipulators = DomManipulators.create(entry.variables);
@@ -337,7 +335,9 @@ function ForeachManipulator(entry, bindingDetails) {
       manipulators.forEach(manipulator => manipulator.update(row));
       entry.template.forEach(x => {
         const newNode = x.cloneNode(true);
-        newNodes.push(newNode);
+        if(newNode.nodeType == Node.ELEMENT_NODE) {
+          newNodes.push(newNode);
+        }
         entry.parent.appendChild(newNode);
       });
       sendCallback(newNodes, row);
