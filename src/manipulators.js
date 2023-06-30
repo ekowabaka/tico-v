@@ -88,12 +88,14 @@ function ForeachManipulator(entry, bindingDetails) {
     entry.parent.innerHTML = "";
     if (!Array.isArray(data)) return;
     for (let row of data) {
+      const newNodes = [];
       manipulators.forEach(manipulator => manipulator.update(row));
       entry.template.forEach(x => {
-        let newNode = x.cloneNode(true);
+        const newNode = x.cloneNode(true);
+        newNodes.push(newNode);
         entry.parent.appendChild(newNode);
-        sendCallback(newNode, row);
       });
+      sendCallback(newNodes, row);
     }
   }
 
