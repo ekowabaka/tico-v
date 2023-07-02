@@ -78,6 +78,7 @@ function DomParser() {
         } else if (match[0] == 'tv-foreach') {
           parentDetected = { 
             template: node.childNodes,
+            childElementCount: node.childElementCount,
             type: 'foreach', 
             parent: node,
             name: attribute.value, 

@@ -39,7 +39,7 @@ function ArrayUpdateHandler(entry, manipulator) {
 
     let node = entry.parent.children[name];
     if (!proxyCache.has(node)) {
-      let proxy = new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name]));
+      const proxy = new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name]));
       proxyCache.set(node, proxy);
       proxiesCreated.set(proxy, target[name]);
     }
@@ -79,6 +79,7 @@ function ArrayUpdateHandler(entry, manipulator) {
  */
 function UpdateHandler(variables, manipulators, node) {
   this.get = function (target, name) {
+    console.log(target, name);
     if (typeof target[name] === 'object' && Array.isArray(target[name]) && variables.get(name)[0].type === "foreach") {
       let entry = variables.get(name)[0];
       let updateHandler = new ArrayUpdateHandler(entry, manipulators[0]);
@@ -157,12 +158,12 @@ function bind(template) {
   if (bindingDetails.templateNode) {
     const variables = domparser.parse(bindingDetails);
     const manipulators = DomManipulators.create(variables, bindingDetails);
-    const nodes = new Map();
-    variables.forEach((value, key) => {
-      value.forEach(variable => {
-        nodes.set(variable.template, variable)
-      });
-    })
+    // const nodes = new Map();
+    // variables.forEach((value, key) => {
+    //   value.forEach(variable => {
+    //     nodes.set(variable.template, variable)
+    //   });
+    // })
     return new View(variables, manipulators, bindingDetails);
   } else {
     throw new Error("Could not find template node");

@@ -160,6 +160,7 @@ function DomParser() {
         } else if (match[0] == 'tv-foreach') {
           parentDetected = { 
             template: node.childNodes,
+            childElementCount: node.childElementCount,
             type: 'foreach', 
             parent: node,
             name: attribute.value, 
@@ -332,15 +333,15 @@ function ForeachManipulator(entry, bindingDetails) {
   this.update = function (data) {
     data = data[entry.name];
     entry.parent.innerHTML = "";
-    if (!Array.isArray(data)) return;
+    if (!Array.isArray(data)) {
+      return;
+    }
     for (let row of data) {
       const newNodes = [];
       manipulators.forEach(manipulator => manipulator.update(row));
       entry.template.forEach(x => {
         const newNode = x.cloneNode(true);
-        if(newNode.nodeType == Node.ELEMENT_NODE) {
-          newNodes.push(newNode);
-        }
+        newNodes.push(newNode);
         entry.parent.appendChild(newNode);
       });
       sendCallback(newNodes, row);
@@ -348,14 +349,19 @@ function ForeachManipulator(entry, bindingDetails) {
   }
 
   this.set = function (key, data) {
+    const newNodes = [];
     manipulators.forEach(manipulator => manipulator.update(data));
-    let newNode = entry.template.cloneNode(true);
-    if (key == entry.parent.children.length) {
-      entry.parent.appendChild(newNode);
-    } else {
-      entry.parent.replaceChild(newNode, entry.parent.children[key]);
-    }
-    sendCallback(newNode, data);
+
+    entry.template.forEach((x, offset) => {
+      const newNode = x.cloneNode(true);
+      newNodes.push(newNode);
+      if (key * entry.template.length + offset === entry.parent.childNodes.length) {
+        entry.parent.appendChild(newNode);
+      } else {
+        entry.parent.replaceChild(newNode, entry.parent.childNodes[key * entry.template.length + offset]);
+      }
+    });
+    sendCallback(newNodes, data);
   }
 }
 
@@ -436,7 +442,7 @@ function ArrayUpdateHandler(entry, manipulator) {
 
     let node = entry.parent.children[name];
     if (!proxyCache.has(node)) {
-      let proxy = new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name]));
+      const proxy = new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name]));
       proxyCache.set(node, proxy);
       proxiesCreated.set(proxy, target[name]);
     }
@@ -476,6 +482,7 @@ function ArrayUpdateHandler(entry, manipulator) {
  */
 function UpdateHandler(variables, manipulators, node) {
   this.get = function (target, name) {
+    console.log(target, name);
     if (typeof target[name] === 'object' && Array.isArray(target[name]) && variables.get(name)[0].type === "foreach") {
       let entry = variables.get(name)[0];
       let updateHandler = new ArrayUpdateHandler(entry, manipulators[0]);
@@ -554,12 +561,12 @@ function bind(template) {
   if (bindingDetails.templateNode) {
     const variables = domparser.parse(bindingDetails);
     const manipulators = DomManipulators.create(variables, bindingDetails);
-    const nodes = new Map();
-    variables.forEach((value, key) => {
-      value.forEach(variable => {
-        nodes.set(variable.template, variable)
-      });
-    })
+    // const nodes = new Map();
+    // variables.forEach((value, key) => {
+    //   value.forEach(variable => {
+    //     nodes.set(variable.template, variable)
+    //   });
+    // })
     return new View(variables, manipulators, bindingDetails);
   } else {
     throw new Error("Could not find template node");

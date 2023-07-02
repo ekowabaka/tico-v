@@ -13,9 +13,11 @@
             window.addEventListener('load', function() {
                 view = tv.bind(document.getElementById("wrapper"));
                 view.addObserver("lis", x => {
-                    console.log(x)
+                    console.log("Observer called:", x)
                 });
                 view.data = data;
+
+                view.data.code.push({"id": 4, "code": "New way to get this done!"})
             });
         </script>
     </head>

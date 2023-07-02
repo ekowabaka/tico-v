@@ -87,15 +87,15 @@ function ForeachManipulator(entry, bindingDetails) {
   this.update = function (data) {
     data = data[entry.name];
     entry.parent.innerHTML = "";
-    if (!Array.isArray(data)) return;
+    if (!Array.isArray(data)) {
+      return;
+    }
     for (let row of data) {
       const newNodes = [];
       manipulators.forEach(manipulator => manipulator.update(row));
       entry.template.forEach(x => {
         const newNode = x.cloneNode(true);
-        if(newNode.nodeType == Node.ELEMENT_NODE) {
-          newNodes.push(newNode);
-        }
+        newNodes.push(newNode);
         entry.parent.appendChild(newNode);
       });
       sendCallback(newNodes, row);
@@ -103,14 +103,19 @@ function ForeachManipulator(entry, bindingDetails) {
   }
 
   this.set = function (key, data) {
+    const newNodes = [];
     manipulators.forEach(manipulator => manipulator.update(data));
-    let newNode = entry.template.cloneNode(true);
-    if (key == entry.parent.children.length) {
-      entry.parent.appendChild(newNode);
-    } else {
-      entry.parent.replaceChild(newNode, entry.parent.children[key]);
-    }
-    sendCallback(newNode, data);
+
+    entry.template.forEach((x, offset) => {
+      const newNode = x.cloneNode(true);
+      newNodes.push(newNode);
+      if (key * entry.template.length + offset === entry.parent.childNodes.length) {
+        entry.parent.appendChild(newNode);
+      } else {
+        entry.parent.replaceChild(newNode, entry.parent.childNodes[key * entry.template.length + offset]);
+      }
+    });
+    sendCallback(newNodes, data);
   }
 }
 
