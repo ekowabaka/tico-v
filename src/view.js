@@ -89,7 +89,6 @@ function ArrayUpdateHandler(entries, manipulators) {
  */
 function UpdateHandler(variables, manipulators, node) {
   this.get = function (target, name) {
-    console.log(variables.get(name))
     // The assumption here is that variables used as foreach will not be used in any other context within the view
     if (typeof target[name] === 'object' && Array.isArray(target[name]) && variables.get(name)[0].type === "foreach") {
       //let entry = variables.get(name)[0];
