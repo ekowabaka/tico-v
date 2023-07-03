@@ -415,19 +415,21 @@ let domparser = new DomParser();
  * @param manipulator
  * @constructor
  */
-function ArrayUpdateHandler(entry, manipulator) {
+function ArrayUpdateHandler(entries, manipulators) {
 
   /**
    * Keeps a weak map cache of proxies attached to dom nodes so they die along with their attached node.
    * @type {WeakMap<Object, any>}
    */
-  let proxyCache = new WeakMap();
+  const proxyCache = new WeakMap();
 
   /**
-   * Keeps a list of all the proxies created so they are not added back to the object or recreated in anyway.
+   * Keeps a map of all the proxies created so they are not added back to the object or recreated in anyway.
    * @type {WeakMap<Object, any>}
    */
-  let proxiesCreated = new WeakMap();
+  const proxiesCreated = new WeakMap();
+
+  const numEntries = entries.length;
 
   /**
    * A trap for returning values from arrays or proxies of objects from the array.
@@ -440,12 +442,17 @@ function ArrayUpdateHandler(entry, manipulator) {
       return target[name];
     }
 
-    let node = entry.parent.children[name];
-    if (!proxyCache.has(node)) {
-      const proxy = new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name]));
-      proxyCache.set(node, proxy);
-      proxiesCreated.set(proxy, target[name]);
-    }
+    // Create the caches for the group of nodes based on the first entry of variables.
+    let node;
+    for(const entry of entries) {
+      node = entry.parent.children[name];
+      if (!proxyCache.has(node)) {
+        const proxy = new Proxy(target[name], new UpdateHandler(entry.variables, entry.manipulators, entry.parent.children[name]));
+        proxyCache.set(node, proxy);
+        proxiesCreated.set(proxy, target[name]);
+        break;
+      }
+    } 
     return proxyCache.get(node);
   }
 
@@ -457,17 +464,20 @@ function ArrayUpdateHandler(entry, manipulator) {
    * @returns {boolean}
    */
   this.set = function (target, name, value) {
+    // Prevent proxies already created from being added back to the array.
     if (proxiesCreated.has(value)) {
       value = proxiesCreated.get(value);
     }
     target[name] = value;
     if (name === 'length') {
-      for (let i = 0; i < entry.parent.children.length - value; i++) {
-        entry.parent.removeChild(entry.parent.lastChild);
-      }
+      entries.forEach(entry => {
+        for (let i = 0; i < entry.parent.children.length - value; i++) {
+          entry.parent.removeChild(entry.parent.lastChild);
+        }  
+      });
       return true;
     }
-    manipulator.set(name, target[name]);
+    manipulators.forEach(x => x.set(name, target[name]));
     return true;
   }
 }
@@ -482,10 +492,11 @@ function ArrayUpdateHandler(entry, manipulator) {
  */
 function UpdateHandler(variables, manipulators, node) {
   this.get = function (target, name) {
-    console.log(target, name);
+    console.log(variables.get(name))
+    // The assumption here is that variables used as foreach will not be used in any other context within the view
     if (typeof target[name] === 'object' && Array.isArray(target[name]) && variables.get(name)[0].type === "foreach") {
-      let entry = variables.get(name)[0];
-      let updateHandler = new ArrayUpdateHandler(entry, manipulators[0]);
+      //let entry = variables.get(name)[0];
+      let updateHandler = new ArrayUpdateHandler(variables.get(name), manipulators);
       return new Proxy(target[name], updateHandler);
     } else if (typeof target[name] === 'object') {
       return target[name];
