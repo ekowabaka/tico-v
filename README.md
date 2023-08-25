@@ -1,6 +1,6 @@
-tiCo-v
+TiCo-v
 ====
-tiCo-v provides a lightweight solution for templating and one-way data-binding in JavaScript. Built on top of ES6 proxies, tiCo-v provides a very thin layer of code which relies on proxy traps to update DOM elements when bound objects are updated.
+tiCo-v provides a lightweight solution for templating and one-way data-binding in JavaScript. Built on top of ES6 proxies, tiCo-v provides a very thin layer of code that relies exclusively on proxy traps to update DOM elements when bound objects are updated.
 
 Installation
 ------------
@@ -14,7 +14,7 @@ For `composer` ...
     
     composer require ekowabaka/tico-v
 
-You might also consider direct inclusion as follows ...
+You might also consider direct inclusion as follows
 
 ````html
 <script src='assets/tico-v.min.js'></script>
@@ -22,7 +22,7 @@ You might also consider direct inclusion as follows ...
 
 
 ## Writing Templates
-Templates for tiCo-v are written directly into the HTML markup of the page you. Variables to be replaced by later bindings are written with the mustache/handlebars style variable placeholder (and that's where the similarity ends). In fact, the featureset of tiCo-v is so small it call be summarised with one example.
+Templates for tiCo-v are written directly into the HTML markup of your the page. Variables to be replaced by later bindings are written with the mustache/handlebars style variable placeholder (and that's where any similarities with those end). In fact, the feature set of tiCo-v is so small it call be summarised with one example.
 
 ````html
 <div id="profile">
@@ -43,7 +43,8 @@ Templates for tiCo-v are written directly into the HTML markup of the page you. 
 ````
 
 ### Text Substitutions
-From the example, we should see that text substitutions are performed with variables specified in curly braces (e.g. ``{{variable}}``). Conditional substitution can be made with the "`?`" operator. So, ``{{variable1 ? variable2}}`` implies, the value of `variable1` will be displayed if it is truthy instead of the value of ``variable2`` which will displayed irrespective of its value. 
+Text substitutions are primarily performed with the `?` operator. This operator can operate in a coalescing or tenary mode, depending on the syntax.
+From the example, we should see that text substitutions are performed with variables specified in curly braces (e.g. ``{{variable}}``). Conditional substitution can be made with the "`?`" operator, which acts as some form of truthy coalescing. So, ``{{variable1 ? variable2}}`` implies the value of `variable1` will be displayed if it is truthy instead of the value of ``variable2``, which will displayed irrespective of its value. 
 
 Conditional substitutions can also involve literal text such as ``{{truth ? "when true" : "when false"}}``. In this case, the text ``when true`` is substituted if the variable ``truth`` is truthy and ``when false`` is displayed when it's false. For literal substitutions, the second literal to be displayed on a false value can be omitted and it's automatically replaced with an empty string.
 

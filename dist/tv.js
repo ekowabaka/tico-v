@@ -571,12 +571,6 @@ function bind(template) {
   if (bindingDetails.templateNode) {
     const variables = domparser.parse(bindingDetails);
     const manipulators = DomManipulators.create(variables, bindingDetails);
-    // const nodes = new Map();
-    // variables.forEach((value, key) => {
-    //   value.forEach(variable => {
-    //     nodes.set(variable.template, variable)
-    //   });
-    // })
     return new View(variables, manipulators, bindingDetails);
   } else {
     throw new Error("Could not find template node");
