@@ -14,23 +14,22 @@
             };
             window.addEventListener('load', function() {
                 view = tv.bind(document.getElementById("wrapper"));
-                view.addObserver("lis", x => {
-                    console.log("Observer called:", x)
-                });
-                view.data = data;
-
+                document.getElementById("ulists").addEventListener("tv-update", e => console.log("ulist updated", e))
+                view.data = data
                 view.data.code.push({"id": 4, "code": "New way to get this done!"})
-                //view.data.changed_name = "A Changed Name"
+                view.data.changed_name = "A Changed Name"
+
+
             });
         </script>
     </head>
     <body>
         <div id="wrapper">
             {{name}} : {{changed_name}}
-            <ul tv-id="lis" tv-foreach="code">
+            <ul id="ulists" tv-id="lis" tv-foreach="code">
                 <li>{{id}}</li>
             </ul>
-            <ol tv-id="ols" tv-foreach="code">
+            <ol id="olists" tv-id="ols" tv-foreach="code">
                 <li tv-value-id="{{id}}" tv-value-class='test {{ id ? "Hi"}}''>{{code}}</li>
             </ol> 
         </div>

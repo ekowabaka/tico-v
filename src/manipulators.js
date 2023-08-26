@@ -30,12 +30,12 @@ function renderText(structure, data) {
  * @param {Object} entry 
  */
 function TextNodeManipulator(entry) {
-
   this.update = function (data, node) {
     let final = node || entry.node;
     final.textContent = renderText(entry.structure, data)
   }
 }
+
 
 /**
  * Responsible for manipulating the values of attributes on DOM elements.
@@ -74,11 +74,10 @@ function TruthAttrubuteManipulator(entry, invert) {
  */
 function ForeachManipulator(entry, bindingDetails) {
 
-  function sendCallback(node, data) {
-    if (!bindingDetails.observers.has(entry.id)) {
-      return;
-    }
-    bindingDetails.observers.get(entry.id).forEach(x => x(node, data));
+  function dispatchEvents(nodes, data) {
+    const event = new Event("tv-update");
+    event.detail = {nodes: nodes.filter(x => x.nodeType != Node.TEXT_NODE || x.nodeValue.trim() != ""), data: data}
+    entry.parent.dispatchEvent(event)
   }
 
   let manipulators = DomManipulators.create(entry.variables);
@@ -98,7 +97,7 @@ function ForeachManipulator(entry, bindingDetails) {
         newNodes.push(newNode);
         entry.parent.appendChild(newNode);
       });
-      sendCallback(newNodes, row);
+      dispatchEvents(newNodes, row);
     }
   }
 
@@ -115,7 +114,9 @@ function ForeachManipulator(entry, bindingDetails) {
         entry.parent.replaceChild(newNode, entry.parent.childNodes[key * entry.template.length + offset]);
       }
     });
-    sendCallback(newNodes, data);
+    dispatchEvents(newNodes, data);
+
+    entry.parent.dispatchEvent
   }
 }
 

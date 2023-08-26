@@ -1,11 +1,16 @@
 /**
  * Parses dom nodes for those with supported tv-* attributes.
  */
-function DomParser() {
+class DomParser {
 
-  let textParser = new TextParser();
-  let attributeRegexes = ["tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"].map(regex => new RegExp(regex, 'i'));
-  let parentId = Math.random();
+  #textParser
+  #attributeRegexes
+
+  constructor() {
+    this.#textParser = new TextParser();
+    this.#attributeRegexes = ["tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"].map(regex => new RegExp(regex, 'i'));
+  
+  }
 
   /**
    * Add a variable extracted from a node to the variables object
@@ -14,7 +19,7 @@ function DomParser() {
    * @param {string} variable 
    * @param {object} nodeDetails 
    */
-  function addNodeToVariable(variables, variable, nodeDetails) {
+  #addNodeToVariable(variables, variable, nodeDetails) {
     if (!variables.has(variable)) {
       variables.set(variable, []);
     }
@@ -27,7 +32,7 @@ function DomParser() {
    * @param {Map} variables 
    * @param {Map} mergedVariables 
    */
-  function mergeVariables(variables, mergedVariables) {
+  #mergeVariables(variables, mergedVariables) {
     mergedVariables.forEach((details, variable) => {
       if(variables.has(variable)) {
         variables.get(variable).concat(details);
@@ -44,35 +49,35 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseAttributes(node, variables, path, bindingDetails) {
+  #parseAttributes(node, variables, path) { 
     let parentDetected = false;
-    let attributeVariables = new Map();
+    const attributeVariables = new Map();
     let id;
 
     for (const attribute of node.attributes) {
-      for (let regex of attributeRegexes) {
-        let match = regex.exec(attribute.name);
+      for (const regex of this.#attributeRegexes) {
+        const match = regex.exec(attribute.name);
         if (!match) continue;
 
         if (match[1] === 'tv-value') {
           // Extract and create attribute nodes on the fly.
-          let attributeNode = document.createAttribute(match[2]);
-          parsed = textParser.parse(attribute.value);
+          const attributeNode = document.createAttribute(match[2]);
+          const parsed = this.#textParser.parse(attribute.value);
           node.setAttributeNode(attributeNode);
 
           parsed.variables.forEach(variable => {
-            addNodeToVariable(attributeVariables, variable, 
+            this.#addNodeToVariable(attributeVariables, variable, 
               { node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure, path: path }
             )
           });
         } else if (match[0] === 'tv-true') {
           // Hide and display nodes according to the truthiness of variables.
-          addNodeToVariable(attributeVariables, attribute.value, 
+          this.#addNodeToVariable(attributeVariables, attribute.value, 
             { node: node, type: 'truth', name: attribute.value, display: node.style.display, path: path }
           )
         } else if (match[0] === 'tv-not-true') {
           // Hide and display nodes according to the truthiness of variables.
-          addNodeToVariable(attributeVariables, attribute.value, 
+          this.#addNodeToVariable(attributeVariables, attribute.value, 
             { node: node, type: 'not-truth', name: attribute.value, display: node.style.display, path: path }
           )
         } else if (match[0] == 'tv-foreach') {
@@ -85,17 +90,14 @@ function DomParser() {
             variables: attributeVariables,
             id: null
           };
-          addNodeToVariable(variables, attribute.value, parentDetected)
-        } else if (match[0] == "tv-id") {
-          id = attribute.value;
-          bindingDetails.observers.set(attribute.value, []);
-        }
+          this.#addNodeToVariable(variables, attribute.value, parentDetected)
+        } 
         break;
       }
     }
 
     if(!parentDetected) {
-      mergeVariables(variables, attributeVariables);
+      this.#mergeVariables(variables, attributeVariables);
     } else if (parentDetected && id) {
       parentDetected['id'] = id;
     }
@@ -110,8 +112,8 @@ function DomParser() {
    * @param {Node} node 
    * @param {Map} variables 
    */
-  function parseNode(node, variables, path, bindingDetails) {
-    const parentDetected = parseAttributes(node, variables, path, bindingDetails);
+  #parseNode(node, variables, path) {
+    const parentDetected = this.#parseAttributes(node, variables, path);
     let children;
     
     if (parentDetected) {
@@ -126,9 +128,9 @@ function DomParser() {
       let parsed = [];
 
       if (child.nodeType == Node.TEXT_NODE) {
-        parsed = textParser.parse(child.textContent);
+        parsed = this.#textParser.parse(child.textContent);
         parsed.variables.forEach(variable => {
-          addNodeToVariable(variables, variable, 
+          this.#addNodeToVariable(variables, variable, 
             { 
               node: child, 
               type: 'text', 
@@ -139,7 +141,7 @@ function DomParser() {
         });
       } else if (child.nodeType == Node.ELEMENT_NODE) {
         const prefix = parentDetected ? "" : `${path}${path == "" ? "" : ">"}`;
-        parseNode(child, variables, `${prefix}${child.nodeName}:nth-child(${n})`, bindingDetails);
+        this.#parseNode(child, variables, `${prefix}${child.nodeName}:nth-child(${n})`);
         n++;
       }
     });
@@ -154,9 +156,9 @@ function DomParser() {
    * and related dom manipulators.
    * @param {Node} node 
    */
-  this.parse = function (bindingDetails) {
+  parse (templateNode) {
     const variables = new Map();
-    parseNode(bindingDetails.templateNode, variables, "", bindingDetails);
+    this.#parseNode(templateNode, variables, "");
     return variables;
   }
 }
