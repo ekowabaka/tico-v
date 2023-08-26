@@ -1,10 +1,3 @@
-/**
- * Instance of DomParser used for parsing views
- * @type {DomParser}
- */
-const domparser = new DomParser();
-
-
 class ArrayUpdateHandler {
 
   #entries
@@ -19,7 +12,7 @@ class ArrayUpdateHandler {
     this.#proxiesCreated = new WeakMap();
   }
 
-  get (target, name) {
+  get(target, name) {
     if (typeof target[name] === 'function' || typeof target[name] !== 'object') {
       return target[name];
     }
@@ -35,10 +28,10 @@ class ArrayUpdateHandler {
         break;
       }
     }
-    return proxyCache.get(node);    
+    return proxyCache.get(node);
   }
 
-  set (target, name, value) {
+  set(target, name, value) {
     // Prevent proxies already created from being added back to the array.
     if (this.#proxiesCreated.has(value)) {
       value = this.#proxiesCreated.get(value);
@@ -70,7 +63,7 @@ class UpdateHandler {
     this.#node = node;
   }
 
-  get (target, name) {
+  get(target, name) {
     if (typeof target[name] === 'object' && Array.isArray(target[name]) && this.#variables.get(name)[0].type === "foreach") {
       const updateHandler = new ArrayUpdateHandler(this.#variables.get(name), this.#manipulators);
       return new Proxy(target[name], updateHandler);
@@ -81,13 +74,13 @@ class UpdateHandler {
     }
   }
 
-  set (target, name, value) {
+  set(target, name, value) {
     target[name] = value;
     this.run(target);
-    return true;    
+    return true;
   }
 
-  run (target) {
+  run(target) {
     this.#manipulators.forEach(manipulator => {
       let manipulatedNode = undefined;
       if (this.#node) {
@@ -101,60 +94,8 @@ class UpdateHandler {
         }
       }
       manipulator.update(target, manipulatedNode)
-    });    
+    });
   }
 }
 
-
-class View {
-
-  #dataProxy
-  #variables
-  #manipulators;
-
-  /**
-   * 
-   * @param {*} variables 
-   * @param {*} manipulators 
-   * @param {*} bindingDetails 
-   */
-  constructor(variables, manipulators) {
-    this.#dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators))
-    this.#variables = variables;
-    this.#manipulators = manipulators;
-  }
-
-  set data(newData) {
-    let updateHandler = new UpdateHandler(this.#variables, this.#manipulators);
-    this.#dataProxy = new Proxy(newData, updateHandler);
-    updateHandler.run(newData);
-  }
-
-  get data() {
-    return this.#dataProxy;
-  }
-}
-
-/**
- * Bind a view to a mapping of its internal variables.
- */
-function bind(template) {
-  const templateNode = typeof template === 'string' ? document.querySelector(template) : template;
-  if (templateNode) {
-    const variables = domparser.parse(templateNode);
-    const manipulators = DomManipulators.create(variables); 
-    return new View(variables, manipulators);
-  } else {
-    throw new Error("Could not find template node");
-  }
-}
-
-let tv = {
-  bind: bind
-}
-
-if (typeof require === 'function') {
-  module.exports = tv;
-} else {
-  window.tv = tv;
-}
+export {UpdateHandler, ArrayUpdateHandler}

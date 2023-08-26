@@ -156,3 +156,5 @@ const DomManipulators = {
     return manipulators;
   }
 }
+
+export {DomManipulators}
