@@ -1,19 +1,23 @@
 {
   "name": "tico-v",
-  "version": "0.1.0",
-  "description": "Lightweight databinding and templating for Javascript",
+  "version": "0.2.0",
+  "description": "Lightweight data binding and templating for Javascript",
+  "type": "module",
   "directories": {
     "test": "test"
   },
+  "jest": {
+    "collectCoverage": true,
+    "coverageReporters": ["json", "html"]
+  },
   "scripts": {
-    "test": ""
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/jest.config.cjs"
   },
   "author": "Ekow Abaka",
   "license": "MIT",
   "devDependencies": {
-    "grunt": "*",
-    "grunt-contrib-concat": "*",
-    "grunt-contrib-uglify": "*",
-    "grunt-contrib-watch": "*"
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "webpack": "^5.95.0"
   }
 }

@@ -3,6 +3,9 @@ import { DomManipulators } from "./manipulators.js";
 import { UpdateHandler } from "./update_handlers.js";
 
 
+/**
+ * A view contains the dom elements with associated tico-v tags that can be bound to data items.
+ */
 class View {
 
   #dataProxy
@@ -10,10 +13,9 @@ class View {
   #manipulators;
 
   /**
-   * 
+   * Create a new Tico View
    * @param {*} variables 
-   * @param {*} manipulators 
-   * @param {*} bindingDetails 
+   * @param {*} manipulators
    */
   constructor(variables, manipulators) {
     this.#dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators))
@@ -21,12 +23,20 @@ class View {
     this.#manipulators = manipulators;
   }
 
+  /**
+   * Setter for the data variable.
+   * @param newData
+   */
   set data(newData) {
     let updateHandler = new UpdateHandler(this.#variables, this.#manipulators);
     this.#dataProxy = new Proxy(newData, updateHandler);
     updateHandler.run(newData);
   }
 
+  /**
+   * Getter for the data variable.
+   * @returns {*}
+   */
   get data() {
     return this.#dataProxy;
   }

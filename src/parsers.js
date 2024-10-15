@@ -132,11 +132,12 @@ class DomParser {
     }
 
     /**
-     * Parse a given node for variables in its attributes which can be later rendered.
+     * Parse a given node for variables in its attributes that can be rendered later.
      * This method returns a parent object in cases where the attribute dictates a foreach loop.
      * 
      * @param {Node} node 
-     * @param {Map} variables 
+     * @param {Map} variables
+     * @param {string} path
      */
     #parseAttributes(node, variables, path) {
         let parentDetected = false;
@@ -243,7 +244,7 @@ class DomParser {
     /**
      * Parse a dom node and return a collection of variables their associated list of observers
      * and related dom manipulators.
-     * @param {Node} node 
+     * @param {Node} templateNode
      */
     parse(templateNode) {
         const variables = new Map();
