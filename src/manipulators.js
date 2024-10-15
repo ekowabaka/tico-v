@@ -55,7 +55,7 @@ function AttributeManipulator(entry) {
  * @param {Object} entry 
  * @param {boolean} invert 
  */
-function TruthAttrubuteManipulator(entry, invert) {
+function TruthAttributeManipulator(entry, invert) {
 
   this.update = function (data, node) {
     let final = node || entry.node;
@@ -115,8 +115,6 @@ function ForeachManipulator(entry, bindingDetails) {
       }
     });
     dispatchEvents(newNodes, data);
-
-    entry.parent.dispatchEvent
   }
 }
 
@@ -138,10 +136,10 @@ const DomManipulators = {
             manipulator = new AttributeManipulator(entry);
             break;
           case 'truth':
-            manipulator = new TruthAttrubuteManipulator(entry, false);
+            manipulator = new TruthAttributeManipulator(entry, false);
             break;
           case 'not-truth':
-            manipulator = new TruthAttrubuteManipulator(entry, true);
+            manipulator = new TruthAttributeManipulator(entry, true);
             break;
           case 'foreach':
             manipulator = new ForeachManipulator(entry, bindingDetails);
