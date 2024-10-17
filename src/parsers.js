@@ -224,7 +224,7 @@ class DomParser {
         children.forEach((child, index) => {
             let parsed = [];
 
-            if (child.nodeType == Node.TEXT_NODE) {
+            if (child.nodeType === Node.TEXT_NODE) {
                 parsed = this.#textParser.parse(child.textContent);
                 parsed.variables.forEach(variable => {
                     this.#addNodeToVariable(variables, variable,
@@ -236,8 +236,8 @@ class DomParser {
                             index: index
                         });
                 });
-            } else if (child.nodeType == Node.ELEMENT_NODE) {
-                this.#parseNode(child, variables, parentDetected ? "" : `${path}${path == "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                this.#parseNode(child, variables, parentDetected ? "" : `${path}${path === "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
                 n++;
             }
         });
