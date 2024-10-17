@@ -14,18 +14,18 @@ class TextParser {
 
     /**
      * Push the leading text from a variable match unto the parsed list
-     * 
-     * @param {string} text 
-     * @param {*} match 
-     * @param {Array} parsed 
+     *
+     * @param {string} text
+     * @param {*} match
+     * @param {Array} parsed
      */
     #pushLeadingText(text, match, parsed) {
         if (match.index > 0) {
-            parsed.push({ type: 'txt', value: text.substring(0, match.index) });
+            parsed.push({type: 'txt', value: text.substring(0, match.index)});
         }
     }
 
-    parse = function (text) {
+    parse (text) {
         let values = [];
         let vars = new Set();
         let order = ['variable', 'condstrelse', 'condstr', 'cond', 'text'];
@@ -49,21 +49,21 @@ class TextParser {
                     switch (order[i]) {
                         case 'variable':
                             this.#pushLeadingText(text, match, values);
-                            values.push({ type: 'var', name: match[1] });
+                            values.push({type: 'var', name: match[1]});
                             vars.add(match[1]);
                             text = text.substr(index, text.length - index);
                             break;
                         case 'condstr':
                         case 'cond':
                             this.#pushLeadingText(text, match, values);
-                            values.push({ type: order[i], var1: match[1], var2: match[2] });
+                            values.push({type: order[i], var1: match[1], var2: match[2]});
                             vars.add(match[1]);
                             text = text.substr(index, text.length - index);
                             if (order[i] === 'cond') vars.add(match[2]);
                             break;
                         case 'condstrelse':
                             this.#pushLeadingText(text, match, values);
-                            values.push({ type: 'condstrelse', var1: match[1], var2: match[2], var3: match[3] });
+                            values.push({type: 'condstrelse', var1: match[1], var2: match[2], var3: match[3]});
                             vars.add(match[1]);
                             text = text.substr(index, text.length - index);
                             break;
@@ -78,18 +78,18 @@ class TextParser {
 
             // If none of the regexes match return the remaining part of the string as is
             if (match === null && text.length > 0) {
-                values.push({ type: 'txt', value: text });
+                values.push({type: 'txt', value: text});
                 break;
             }
         }
-        return { variables: vars, structure: values }
+        return {variables: vars, structure: values}
     }
 }
 
 
 /**
-* Parses dom nodes for those with supported tv-* attributes.
-*/
+ * Parses dom nodes for those with supported tv-* attributes.
+ */
 class DomParser {
 
     #textParser
@@ -103,10 +103,10 @@ class DomParser {
 
     /**
      * Add a variable extracted from a node to the variables object
-     * 
-     * @param {Map} variables 
-     * @param {string} variable 
-     * @param {object} nodeDetails 
+     *
+     * @param {Map} variables
+     * @param {string} variable
+     * @param {object} nodeDetails
      */
     #addNodeToVariable(variables, variable, nodeDetails) {
         if (!variables.has(variable)) {
@@ -117,9 +117,9 @@ class DomParser {
 
     /**
      * Merge one set of variables into another
-     * 
-     * @param {Map} variables 
-     * @param {Map} mergedVariables 
+     *
+     * @param {Map} variables
+     * @param {Map} mergedVariables
      */
     #mergeVariables(variables, mergedVariables) {
         mergedVariables.forEach((details, variable) => {
@@ -134,8 +134,8 @@ class DomParser {
     /**
      * Parse a given node for variables in its attributes that can be rendered later.
      * This method returns a parent object in cases where the attribute dictates a foreach loop.
-     * 
-     * @param {Node} node 
+     *
+     * @param {Node} node
      * @param {Map} variables
      * @param {string} path
      */
@@ -157,20 +157,26 @@ class DomParser {
 
                     parsed.variables.forEach(variable => {
                         this.#addNodeToVariable(attributeVariables, variable,
-                            { node: attributeNode, type: 'attribute', name: match[2], structure: parsed.structure, path: path }
+                            {
+                                node: attributeNode,
+                                type: 'attribute',
+                                name: match[2],
+                                structure: parsed.structure,
+                                path: path
+                            }
                         )
                     });
                 } else if (match[0] === 'tv-true') {
                     // Hide and display nodes according to the truthiness of variables.
                     this.#addNodeToVariable(attributeVariables, attribute.value,
-                        { node: node, type: 'truth', name: attribute.value, display: node.style.display, path: path }
+                        {node: node, type: 'truth', name: attribute.value, display: node.style.display, path: path}
                     )
                 } else if (match[0] === 'tv-not-true') {
                     // Hide and display nodes according to the truthiness of variables.
                     this.#addNodeToVariable(attributeVariables, attribute.value,
-                        { node: node, type: 'not-truth', name: attribute.value, display: node.style.display, path: path }
+                        {node: node, type: 'not-truth', name: attribute.value, display: node.style.display, path: path}
                     )
-                } else if (match[0] == 'tv-foreach') {
+                } else if (match[0] === 'tv-foreach') {
                     parentDetected = {
                         template: node.childNodes,
                         childElementCount: node.childElementCount,
@@ -178,6 +184,7 @@ class DomParser {
                         parent: node,
                         name: attribute.value,
                         variables: attributeVariables,
+                        path: path,
                         id: null
                     };
                     this.#addNodeToVariable(variables, attribute.value, parentDetected)
@@ -191,16 +198,16 @@ class DomParser {
         } else if (parentDetected && id) {
             parentDetected['id'] = id;
         }
-
+        attributeVariables.forEach(x => x.path)
         return parentDetected;
     }
 
     /**
-     * Parse an element node and its children to find any text nodes or attributes that contain variables to which 
+     * Parse an element node and its children to find any text nodes or attributes that contain variables to which
      * bindings can be created.
-     * 
-     * @param {Node} node 
-     * @param {Map} variables 
+     *
+     * @param {Node} node
+     * @param {Map} variables
      */
     #parseNode(node, variables, path) {
         const parentDetected = this.#parseAttributes(node, variables, path);
@@ -230,8 +237,7 @@ class DomParser {
                         });
                 });
             } else if (child.nodeType == Node.ELEMENT_NODE) {
-                const prefix = parentDetected ? "" : `${path}${path == "" ? "" : ">"}`;
-                this.#parseNode(child, variables, `${prefix}${child.nodeName}:nth-child(${n})`);
+                this.#parseNode(child, variables, parentDetected ? "" : `${path}${path == "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
                 n++;
             }
         });

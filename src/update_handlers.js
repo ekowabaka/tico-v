@@ -28,7 +28,7 @@ class ArrayUpdateHandler {
                 break;
             }
         }
-        return proxyCache.get(node);
+        return this.#proxyCache.get(node);
     }
 
     set(target, name, value) {
@@ -84,7 +84,7 @@ class UpdateHandler {
         this.#manipulators.forEach(manipulator => {
             let manipulatedNode = undefined;
             if (this.#node) {
-                const baseNode = manipulator.variables.path == "" ? node : node.querySelector(manipulator.variables.path);
+                const baseNode = manipulator.variables.path === "" ? this.#node : this.#node.querySelector(manipulator.variables.path);
                 if (manipulator.variables.type == "text") {
                     manipulatedNode = baseNode.childNodes[manipulator.variables.index];
                 } else if (manipulator.variables.type == "attribute") {

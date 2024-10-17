@@ -29,10 +29,16 @@ function renderText(structure, data) {
  * 
  * @param {Object} entry 
  */
-function TextNodeManipulator(entry) {
-  this.update = function (data, node) {
-    let final = node || entry.node;
-    final.textContent = renderText(entry.structure, data)
+class TextNodeManipulator {
+
+  #entry
+
+  constructor(entry) {
+    this.#entry = entry
+  }
+
+  update(data, node) {
+    (node || this.#entry.node).textContent = renderText(this.#entry.structure, data)
   }
 }
 
@@ -42,10 +48,15 @@ function TextNodeManipulator(entry) {
  * 
  * @param {Object} entry 
  */
-function AttributeManipulator(entry) {
-  this.update = function (data, node) {
-    let final = node || entry.node;
-    final.value = renderText(entry.structure, data);
+class AttributeManipulator {
+  #entry
+
+  constructor(entry) {
+    this.#entry = entry
+  }
+
+  update(data, node) {
+    (node || this.#entry.node).value = renderText(this.#entry.structure, data)
   }
 }
 
@@ -55,66 +66,75 @@ function AttributeManipulator(entry) {
  * @param {Object} entry 
  * @param {boolean} invert 
  */
-function TruthAttributeManipulator(entry, invert) {
+class TruthAttributeManipulator {
 
-  this.update = function (data, node) {
-    let final = node || entry.node;
-    if ((data[entry.name] && !invert) || (!data[entry.name] && invert)) {
-      final.style.display = entry.display;
+  #entry
+  #invert
+
+  constructor(entry, invert) {
+    this.#entry = entry
+    this.#invert = invert
+  }
+
+  update(data, node) {
+    let final = node || this.#entry.node;
+    if ((data[this.#entry.name] && !this.#invert) || (!data[this.#entry.name] && this.#invert)) {
+      final.style.display = this.#entry.display;
     } else {
       final.style.display = 'none';
     }
   }
 }
 
-/**
- * Responsible for rendering repitions for array based data.
- * 
- * @param {Object} entry 
- */
-function ForeachManipulator(entry, bindingDetails) {
+class ForeachManipulator {
 
-  function dispatchEvents(nodes, data) {
-    const event = new Event("tv-update");
-    event.detail = {nodes: nodes.filter(x => x.nodeType != Node.TEXT_NODE || x.nodeValue.trim() != ""), data: data}
-    entry.parent.dispatchEvent(event)
+  #entry
+  #manipulators
+
+  constructor(entry, bindingDetails) {
+    this.#entry = entry
+    this.#manipulators = DomManipulators.create(entry.variables, bindingDetails)
+    this.#entry.manipulators = this.#manipulators
   }
 
-  let manipulators = DomManipulators.create(entry.variables);
-  entry.manipulators = manipulators;
+  #dispatchEvents(nodes, data) {
+    const event = new Event("tv-update");
+    event.detail = {nodes: nodes.filter(x => x.nodeType != Node.TEXT_NODE || x.nodeValue.trim() != ""), data: data}
+    this.#entry.parent.dispatchEvent(event)
+  }
 
-  this.update = function (data) {
-    data = data[entry.name];
-    entry.parent.innerHTML = "";
+  update (data) {
+    data = data[this.#entry.name];
+    this.#entry.parent.innerHTML = "";
     if (!Array.isArray(data)) {
       return;
     }
     for (let row of data) {
       const newNodes = [];
-      manipulators.forEach(manipulator => manipulator.update(row));
-      entry.template.forEach(x => {
+      this.#manipulators.forEach(manipulator => manipulator.update(row));
+      this.#entry.template.forEach(x => {
         const newNode = x.cloneNode(true);
         newNodes.push(newNode);
-        entry.parent.appendChild(newNode);
+        this.#entry.parent.appendChild(newNode);
       });
-      dispatchEvents(newNodes, row);
+      this.#dispatchEvents(newNodes, row);
     }
   }
 
-  this.set = function (key, data) {
+  set (key, data) {
     const newNodes = [];
-    manipulators.forEach(manipulator => manipulator.update(data));
+    this.#manipulators.forEach(manipulator => manipulator.update(data));
 
-    entry.template.forEach((x, offset) => {
+    this.#entry.template.forEach((x, offset) => {
       const newNode = x.cloneNode(true);
       newNodes.push(newNode);
-      if (key * entry.template.length + offset === entry.parent.childNodes.length) {
-        entry.parent.appendChild(newNode);
+      if (key * this.#entry.template.length + offset === this.#entry.parent.childNodes.length) {
+        this.#entry.parent.appendChild(newNode);
       } else {
-        entry.parent.replaceChild(newNode, entry.parent.childNodes[key * entry.template.length + offset]);
+        this.#entry.parent.replaceChild(newNode, this.#entry.parent.childNodes[key * this.#entry.template.length + offset]);
       }
     });
-    dispatchEvents(newNodes, data);
+    this.#dispatchEvents(newNodes, data);
   }
 }
 
