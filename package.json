@@ -8,16 +8,21 @@
   },
   "jest": {
     "collectCoverage": true,
-    "coverageReporters": ["json", "html"]
+    "coverageReporters": [
+      "json",
+      "html"
+    ]
   },
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/jest.config.cjs"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/jest.config.cjs",
+    "build": "webpack"
   },
   "author": "Ekow Abaka",
   "license": "MIT",
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "webpack": "^5.95.0"
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4"
   }
 }

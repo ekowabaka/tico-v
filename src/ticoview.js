@@ -45,7 +45,7 @@ class View {
 /**
  * Bind a view to a mapping of its internal variables.
  */
-export default function bind(template) {
+export function bind(template) {
   const templateNode = typeof template === 'string' ? document.querySelector(template) : template;
   if (templateNode) {
     const domparser = new DomParser();
