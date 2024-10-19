@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import tv from "../src/ticoview.js";
+import {bind} from "../src/ticoview.js";
 
 let view, wrapper
 
@@ -18,7 +18,7 @@ beforeEach(() => {
         </body>
     </html>`
 
-    view = tv(document.getElementById('wrapper'))
+    view = bind(document.getElementById('wrapper'))
     view.data = {
         items: [
             {id: 1, text: "Hello"}, {id: 2, text: "World"},

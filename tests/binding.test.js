@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import tv from '../src/ticoview'
+import {bind} from '../src/ticoview'
 
 test("binds data to a dom element", () => {
     document.body.innerHTML = `
@@ -14,7 +14,7 @@ test("binds data to a dom element", () => {
         </body>
     </html>`
 
-    const view = tv(document.getElementById('wrapper'))
+    const view = bind(document.getElementById('wrapper'))
     view.data = {bound: "Some Data!"}
     expect(document.body.querySelector("#wrapper > div").innerHTML).toEqual("Some Data!")
 
@@ -32,7 +32,7 @@ test("binds attributes to a dom element", () => {
         </body>
     </html>`
 
-    const view = tv(document.getElementById('wrapper'))
+    const view = bind(document.getElementById('wrapper'))
     view.data = {value: "Some Data!"}
 
     expect(document.body.querySelector("#wrapper > div").hasAttribute('attrib')).toEqual(true);
@@ -50,7 +50,7 @@ test("shows or hides dom nodes", () => {
         </body>
     </html>`
 
-    const view = tv(document.getElementById('wrapper'))
+    const view = bind(document.getElementById('wrapper'))
     view.data = {shown: false}
     expect(document.body.querySelector("#wrapper > div").getAttribute("style")).toEqual("display: none;");
     view.data = {shown: true}
@@ -65,7 +65,7 @@ test("inversely shows or hides dom nodes", () => {
         </body>
     </html>`
 
-    const view = tv(document.getElementById('wrapper'))
+    const view = bind(document.getElementById('wrapper'))
     view.data = {inverseShown: false}
     expect(document.body.querySelector("#wrapper > div").getAttribute("style")).toEqual(null);
     view.data = {inverseShown: true}
