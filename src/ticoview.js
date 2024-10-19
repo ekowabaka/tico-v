@@ -45,7 +45,7 @@ class View {
 /**
  * Bind a view to a mapping of its internal variables.
  */
-function bind(template) {
+export default function bind(template) {
   const templateNode = typeof template === 'string' ? document.querySelector(template) : template;
   if (templateNode) {
     const domparser = new DomParser();
@@ -56,5 +56,3 @@ function bind(template) {
     throw new Error("Could not find template node");
   }
 }
-
-export {bind as tv};

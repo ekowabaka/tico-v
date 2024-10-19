@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { tv } from '../src/ticoview'
+import tv from '../src/ticoview'
 
 test("binds data to a dom element", () => {
     document.body.innerHTML = `

@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import {tv} from "../src/ticoview.js";
+import tv from "../src/ticoview.js";
 
 let view, wrapper
 
