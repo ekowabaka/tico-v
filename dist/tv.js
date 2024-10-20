@@ -216,6 +216,7 @@ __webpack_require__.r(__webpack_exports__);
 class TextParser {
 
     #regexes
+    #tokens
 
     constructor() {
         this.#regexes = {
@@ -224,7 +225,7 @@ class TextParser {
             condstrelse: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*"([^"]*)"\\s*:\\s*"([^"]*)"\\s*}}`, 'i'),
             cond: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*([^"]*)\\s*}}`, 'i'),
             text: new RegExp(`{{`, 'i')
-        };
+        }
     }
 
     /**
@@ -258,43 +259,43 @@ class TextParser {
             // Loop through the regexes in the order specified
             for (let i in order) {
                 if (text.length === 0) break;
-                match = this.#regexes[order[i]].exec(text);
+                match = this.#regexes[order[i]].exec(text)
                 if (match) {
-                    index = match.index + match[0].length;
+                    index = match.index + match[0].length
                     switch (order[i]) {
                         case 'variable':
-                            this.#pushLeadingText(text, match, values);
-                            values.push({type: 'var', name: match[1]});
-                            vars.add(match[1]);
-                            text = text.substr(index, text.length - index);
+                            this.#pushLeadingText(text, match, values)
+                            values.push({type: 'var', name: match[1]})
+                            vars.add(match[1])
+                            text = text.substr(index, text.length - index)
                             break;
                         case 'condstr':
                         case 'cond':
                             this.#pushLeadingText(text, match, values);
-                            values.push({type: order[i], var1: match[1], var2: match[2]});
-                            vars.add(match[1]);
-                            text = text.substr(index, text.length - index);
-                            if (order[i] === 'cond') vars.add(match[2]);
+                            values.push({type: order[i], var1: match[1].trim(), var2: match[2].trim()})
+                            vars.add(match[1].trim())
+                            text = text.substr(index, text.length - index)
+                            if (order[i] === 'cond') vars.add(match[2].trim())
                             break;
                         case 'condstrelse':
-                            this.#pushLeadingText(text, match, values);
-                            values.push({type: 'condstrelse', var1: match[1], var2: match[2], var3: match[3]});
-                            vars.add(match[1]);
-                            text = text.substr(index, text.length - index);
+                            this.#pushLeadingText(text, match, values)
+                            values.push({type: 'condstrelse', var1: match[1], var2: match[2], var3: match[3]})
+                            vars.add(match[1])
+                            text = text.substr(index, text.length - index)
                             break;
                         case 'text':
-                            this.#pushLeadingText(text, match, values);
-                            text = text.substr(match.index, text.length - match.index);
-                            break;
+                            this.#pushLeadingText(text, match, values)
+                            text = text.substr(match.index, text.length - match.index)
+                            break
                     }
                 }
-                if (match) break;
+                if (match) break
             }
 
             // If none of the regexes match return the remaining part of the string as is
             if (match === null && text.length > 0) {
-                values.push({type: 'txt', value: text});
-                break;
+                values.push({type: 'txt', value: text})
+                break
             }
         }
         return {variables: vars, structure: values}
@@ -311,9 +312,10 @@ class DomParser {
     #attributeRegexes
 
     constructor() {
-        this.#textParser = new TextParser();
-        this.#attributeRegexes = ["tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"].map(regex => new RegExp(regex, 'i'));
-
+        this.#textParser = new TextParser()
+        this.#attributeRegexes = [
+            "tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"
+        ].map(regex => new RegExp(regex, 'i'))
     }
 
     /**
@@ -325,9 +327,9 @@ class DomParser {
      */
     #addNodeToVariable(variables, variable, nodeDetails) {
         if (!variables.has(variable)) {
-            variables.set(variable, []);
+            variables.set(variable, [])
         }
-        variables.get(variable).push(nodeDetails);
+        variables.get(variable).push(nodeDetails)
     }
 
     /**
@@ -339,7 +341,7 @@ class DomParser {
     #mergeVariables(variables, mergedVariables) {
         mergedVariables.forEach((details, variable) => {
             if (variables.has(variable)) {
-                variables.get(variable).concat(details);
+                variables.get(variable).concat(details)
             } else {
                 variables.set(variable, details)
             }
@@ -356,19 +358,19 @@ class DomParser {
      */
     #parseAttributes(node, variables, path) {
         let parentDetected = false;
-        const attributeVariables = new Map();
+        const attributeVariables = new Map()
         let id;
 
         for (const attribute of node.attributes) {
             for (const regex of this.#attributeRegexes) {
-                const match = regex.exec(attribute.name);
-                if (!match) continue;
+                const match = regex.exec(attribute.name)
+                if (!match) continue
 
                 if (match[1] === 'tv-value') {
                     // Extract and create attribute nodes on the fly.
-                    const attributeNode = document.createAttribute(match[2]);
-                    const parsed = this.#textParser.parse(attribute.value);
-                    node.setAttributeNode(attributeNode);
+                    const attributeNode = document.createAttribute(match[2])
+                    const parsed = this.#textParser.parse(attribute.value)
+                    node.setAttributeNode(attributeNode)
 
                     parsed.variables.forEach(variable => {
                         this.#addNodeToVariable(attributeVariables, variable,
@@ -380,7 +382,7 @@ class DomParser {
                                 path: path
                             }
                         )
-                    });
+                    })
                 } else if (match[0] === 'tv-true') {
                     // Hide and display nodes according to the truthiness of variables.
                     this.#addNodeToVariable(attributeVariables, attribute.value,
@@ -401,7 +403,7 @@ class DomParser {
                         variables: attributeVariables,
                         path: path,
                         id: null
-                    };
+                    }
                     this.#addNodeToVariable(variables, attribute.value, parentDetected)
                 }
                 break;
@@ -411,7 +413,7 @@ class DomParser {
         if (!parentDetected) {
             this.#mergeVariables(variables, attributeVariables);
         } else if (parentDetected && id) {
-            parentDetected['id'] = id;
+            parentDetected['id'] = id
         }
         attributeVariables.forEach(x => x.path)
         return parentDetected;
@@ -430,9 +432,9 @@ class DomParser {
 
         if (parentDetected) {
             variables = parentDetected.variables;
-            children = Array.from(node.childNodes).map(x => x.cloneNode(true));
+            children = Array.from(node.childNodes).map(x => x.cloneNode(true))
         } else {
-            children = node.childNodes;
+            children = node.childNodes
         }
 
         let n = 1;
@@ -440,7 +442,7 @@ class DomParser {
             let parsed = [];
 
             if (child.nodeType === Node.TEXT_NODE) {
-                parsed = this.#textParser.parse(child.textContent);
+                parsed = this.#textParser.parse(child.textContent)
                 parsed.variables.forEach(variable => {
                     this.#addNodeToVariable(variables, variable,
                         {
@@ -449,16 +451,16 @@ class DomParser {
                             structure: parsed.structure,
                             path: path,
                             index: index
-                        });
-                });
+                        })
+                })
             } else if (child.nodeType === Node.ELEMENT_NODE) {
                 this.#parseNode(child, variables, parentDetected ? "" : `${path}${path === "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
-                n++;
+                n++
             }
         });
 
         if (parentDetected) {
-            parentDetected.template = children;
+            parentDetected.template = children
         }
     }
 
@@ -468,11 +470,12 @@ class DomParser {
      * @param {Node} templateNode
      */
     parse(templateNode) {
-        const variables = new Map();
-        this.#parseNode(templateNode, variables, "");
-        return variables;
+        const variables = new Map()
+        this.#parseNode(templateNode, variables, "")
+        return variables
     }
 }
+
 
 
 
@@ -674,7 +677,7 @@ class View {
 
   #dataProxy
   #variables
-  #manipulators;
+  #manipulators
 
   /**
    * Create a new Tico View
@@ -683,8 +686,8 @@ class View {
    */
   constructor(variables, manipulators) {
     this.#dataProxy = new Proxy({}, new _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__.UpdateHandler(variables, manipulators))
-    this.#variables = variables;
-    this.#manipulators = manipulators;
+    this.#variables = variables
+    this.#manipulators = manipulators
   }
 
   /**
@@ -692,9 +695,9 @@ class View {
    * @param newData
    */
   set data(newData) {
-    let updateHandler = new _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__.UpdateHandler(this.#variables, this.#manipulators);
-    this.#dataProxy = new Proxy(newData, updateHandler);
-    updateHandler.run(newData);
+    let updateHandler = new _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__.UpdateHandler(this.#variables, this.#manipulators)
+    this.#dataProxy = new Proxy(newData, updateHandler)
+    updateHandler.run(newData)
   }
 
   /**
@@ -702,7 +705,7 @@ class View {
    * @returns {*}
    */
   get data() {
-    return this.#dataProxy;
+    return this.#dataProxy
   }
 }
 
@@ -712,12 +715,12 @@ class View {
 function bind(template) {
   const templateNode = typeof template === 'string' ? document.querySelector(template) : template;
   if (templateNode) {
-    const domparser = new _parsers_js__WEBPACK_IMPORTED_MODULE_0__.DomParser();
-    const variables = domparser.parse(templateNode);
-    const manipulators = _manipulators_js__WEBPACK_IMPORTED_MODULE_1__.DomManipulators.create(variables); 
-    return new View(variables, manipulators);
+    const domparser = new _parsers_js__WEBPACK_IMPORTED_MODULE_0__.DomParser()
+    const variables = domparser.parse(templateNode)
+    const manipulators = _manipulators_js__WEBPACK_IMPORTED_MODULE_1__.DomManipulators.create(variables)
+    return new View(variables, manipulators)
   } else {
-    throw new Error("Could not find template node");
+    throw new Error("Could not find template node")
   }
 }
 
