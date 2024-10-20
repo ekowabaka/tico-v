@@ -1,6 +1,6 @@
-import { DomParser } from "./parsers.js";
-import { DomManipulators } from "./manipulators.js";
-import { UpdateHandler } from "./update_handlers.js";
+import { DomParser } from "./parsers.js"
+import { DomManipulators } from "./manipulators.js"
+import { UpdateHandler } from "./update_handlers.js"
 
 
 /**
@@ -10,7 +10,7 @@ class View {
 
   #dataProxy
   #variables
-  #manipulators;
+  #manipulators
 
   /**
    * Create a new Tico View
@@ -19,8 +19,8 @@ class View {
    */
   constructor(variables, manipulators) {
     this.#dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators))
-    this.#variables = variables;
-    this.#manipulators = manipulators;
+    this.#variables = variables
+    this.#manipulators = manipulators
   }
 
   /**
@@ -28,9 +28,9 @@ class View {
    * @param newData
    */
   set data(newData) {
-    let updateHandler = new UpdateHandler(this.#variables, this.#manipulators);
-    this.#dataProxy = new Proxy(newData, updateHandler);
-    updateHandler.run(newData);
+    let updateHandler = new UpdateHandler(this.#variables, this.#manipulators)
+    this.#dataProxy = new Proxy(newData, updateHandler)
+    updateHandler.run(newData)
   }
 
   /**
@@ -38,7 +38,7 @@ class View {
    * @returns {*}
    */
   get data() {
-    return this.#dataProxy;
+    return this.#dataProxy
   }
 }
 
@@ -48,11 +48,11 @@ class View {
 export function bind(template) {
   const templateNode = typeof template === 'string' ? document.querySelector(template) : template;
   if (templateNode) {
-    const domparser = new DomParser();
-    const variables = domparser.parse(templateNode);
-    const manipulators = DomManipulators.create(variables); 
-    return new View(variables, manipulators);
+    const domparser = new DomParser()
+    const variables = domparser.parse(templateNode)
+    const manipulators = DomManipulators.create(variables)
+    return new View(variables, manipulators)
   } else {
-    throw new Error("Could not find template node");
+    throw new Error("Could not find template node")
   }
 }
