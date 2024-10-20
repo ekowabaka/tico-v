@@ -1,6 +1,6 @@
 {
   "name": "tico-v",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Lightweight data binding and templating for Javascript",
   "type": "module",
   "directories": {
