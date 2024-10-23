@@ -77,3 +77,4 @@ test("add to view array", () => {
     expect(wrapper.children[2].innerHTML).toEqual("Three")
     expect(wrapper.children[2].id).toEqual("3")
 })
+

@@ -1,7 +1,6 @@
 class TextParser {
 
     #regexes
-    #tokens
 
     constructor() {
         this.#regexes = {
@@ -118,17 +117,17 @@ class DomParser {
     }
 
     /**
-     * Merge one set of variables into another
+     * Merge one set of into into another
      *
-     * @param {Map} variables
-     * @param {Map} mergedVariables
+     * @param {Map} into
+     * @param {Map} from
      */
-    #mergeVariables(variables, mergedVariables) {
-        mergedVariables.forEach((details, variable) => {
-            if (variables.has(variable)) {
-                variables.get(variable).concat(details)
+    #mergeVariables(into, from) {
+        from.forEach((details, variable) => {
+            if (into.has(variable)) {
+                into.get(variable).concat(details)
             } else {
-                variables.set(variable, details)
+                into.set(variable, details)
             }
         });
     }
@@ -141,10 +140,12 @@ class DomParser {
      * @param {Map} variables
      * @param {string} path
      */
-    #parseAttributes(node, variables, path) {
-        let parentDetected = false;
-        const attributeVariables = new Map()
-        let id;
+    #parseAttributes(node, path) {
+
+        const response = {
+            parentVariable: null,
+            variables: new Map()
+        }
 
         for (const attribute of node.attributes) {
             for (const regex of this.#attributeRegexes) {
@@ -158,7 +159,7 @@ class DomParser {
                     node.setAttributeNode(attributeNode)
 
                     parsed.variables.forEach(variable => {
-                        this.#addNodeToVariable(attributeVariables, variable,
+                        this.#addNodeToVariable(response.variables, variable,
                             {
                                 node: attributeNode,
                                 type: 'attribute',
@@ -170,38 +171,31 @@ class DomParser {
                     })
                 } else if (match[0] === 'tv-true') {
                     // Hide and display nodes according to the truthiness of variables.
-                    this.#addNodeToVariable(attributeVariables, attribute.value,
+                    this.#addNodeToVariable(response.variables, attribute.value,
                         {node: node, type: 'truth', name: attribute.value, display: node.style.display, path: path}
                     )
                 } else if (match[0] === 'tv-not-true') {
                     // Hide and display nodes according to the truthiness of variables.
-                    this.#addNodeToVariable(attributeVariables, attribute.value,
+                    this.#addNodeToVariable(response.variables, attribute.value,
                         {node: node, type: 'not-truth', name: attribute.value, display: node.style.display, path: path}
                     )
                 } else if (match[0] === 'tv-foreach') {
-                    parentDetected = {
+                    response.parentVariable = {
                         template: node.childNodes,
                         childElementCount: node.childElementCount,
                         type: 'foreach',
                         parent: node,
                         name: attribute.value,
-                        variables: attributeVariables,
+                        variables: new Map(),
                         path: path,
                         id: null
                     }
-                    this.#addNodeToVariable(variables, attribute.value, parentDetected)
                 }
                 break;
             }
         }
 
-        if (!parentDetected) {
-            this.#mergeVariables(variables, attributeVariables);
-        } else if (parentDetected && id) {
-            parentDetected['id'] = id
-        }
-        attributeVariables.forEach(x => x.path)
-        return parentDetected;
+        return response
     }
 
     /**
@@ -211,16 +205,19 @@ class DomParser {
      * @param {Node} node
      * @param {Map} variables
      */
-    #parseNode(node, variables, path) {
-        const parentDetected = this.#parseAttributes(node, variables, path);
+    #parseNode(node, path) {
+        const variables = new Map()
+        const attributes = this.#parseAttributes(node, path);
         let children;
 
-        if (parentDetected) {
-            variables = parentDetected.variables;
+        if (attributes.parentVariable) {
+            // variables = parentDetected.variables;
             children = Array.from(node.childNodes).map(x => x.cloneNode(true))
+            attributes.parentVariable.template = children
         } else {
             children = node.childNodes
         }
+        this.#mergeVariables(variables, attributes.variables)
 
         let n = 1;
         children.forEach((child, index) => {
@@ -239,14 +236,18 @@ class DomParser {
                         })
                 })
             } else if (child.nodeType === Node.ELEMENT_NODE) {
-                this.#parseNode(child, variables, parentDetected ? "" : `${path}${path === "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
+                const childVariables = this.#parseNode(child, attributes ? "" : `${path}${path === "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
+                if (attributes.parentVariable) {
+                    this.#mergeVariables(attributes.parentVariable.variables, childVariables)
+                    this.#addNodeToVariable(variables, attributes.parentVariable.name, attributes.parentVariable)
+                } else {
+                    this.#mergeVariables(variables, childVariables)
+                }
                 n++
             }
         });
 
-        if (parentDetected) {
-            parentDetected.template = children
-        }
+        return variables
     }
 
     /**
@@ -255,9 +256,7 @@ class DomParser {
      * @param {Node} templateNode
      */
     parse(templateNode) {
-        const variables = new Map()
-        this.#parseNode(templateNode, variables, "")
-        return variables
+        return this.#parseNode(templateNode, "")
     }
 }
 

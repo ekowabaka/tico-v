@@ -10,6 +10,24 @@ test("binds data to a dom element", () => {
     <html>
         <head><title>A test page</title></head>
         <body>
+            <div id="wrapper">{{bound}}</div>
+        </body>
+    </html>`
+
+    const view = bind(document.getElementById('wrapper'))
+    view.data = {bound: "Some Data!"}
+    expect(document.body.querySelector("#wrapper").innerHTML).toEqual("Some Data!")
+
+    view.data.bound = "Changed!"
+    expect(document.body.querySelector("#wrapper").innerHTML).toEqual("Changed!")
+})
+
+test("binds data to a child dom element", () => {
+    document.body.innerHTML = `
+    <!DOCTYPE html>
+    <html>
+        <head><title>A test page</title></head>
+        <body>
             <div id="wrapper"><div>{{bound}}</div></div>
         </body>
     </html>`
@@ -70,4 +88,28 @@ test("inversely shows or hides dom nodes", () => {
     expect(document.body.querySelector("#wrapper > div").getAttribute("style")).toEqual(null);
     view.data = {inverseShown: true}
     expect(document.body.querySelector("#wrapper > div").getAttribute("style")).toEqual("display: none;");
+})
+
+test("binding over foreach items", () => {
+    document.body.innerHTML = `<html>
+        <head><title>A test page</title></head>
+        <body>
+            <ul tv-value-class="{{aclass}}" tv-foreach="items" id="wrapper">
+                <li>{{description}}</li>
+            </ul>
+        </body>
+    </html>`
+
+    const view = bind(document.getElementById('wrapper'))
+    view.data = {
+        items: [
+            {'description': 'First item'},
+            {'description': 'Second item'},
+            {'description': 'Third item'},
+        ],
+        aclass: 'anewclass'
+    }
+
+    expect(document.body.querySelector("#wrapper").getAttribute("class")).toEqual("anewclass");
+    expect(document.body.querySelector("#wrapper").children).toHaveLength(3)
 })
