@@ -1,5 +1,9 @@
 Changelog
 =========
+2024-10-22 - v0.3.1
+-------------------
+- Fixes bugs which prevents elements with foreach attributes from having other variables.
+- Refactored the parsing code to make it cleaner and easier to follow.
 
 2024-10-20 - v0.3.0
 -------------------
