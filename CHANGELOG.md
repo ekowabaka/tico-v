@@ -1,5 +1,9 @@
 Changelog
 =========
+2024-10-22 - v0.3.2
+-------------------
+- Adds correct build artifacts.
+
 2024-10-22 - v0.3.1
 -------------------
 - Fixes bugs which prevents elements with foreach attributes from having other variables.
