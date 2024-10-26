@@ -84,6 +84,23 @@ class AttributeManipulator {
   }
 }
 
+class SetManipulator {
+  #entry
+
+  constructor(entry) {
+    this.#entry = entry
+  }
+
+  update(data, node) {
+    const final = node || this.#entry.node
+    if (data[this.#entry.name]) {
+      final.setAttribute(this.#entry.attribute, this.#entry.attribute);
+    } else if (final.hasAttribute(this.#entry.attribute)) {
+      final.removeAttribute(this.#entry.attribute)
+    }
+  }
+}
+
 /**
  * Responsible for showing or hiding nodes based on the data passed.
  * 
@@ -101,11 +118,11 @@ class TruthAttributeManipulator {
   }
 
   update(data, node) {
-    let final = node || this.#entry.node;
+    const final = node || this.#entry.node
     if ((data[this.#entry.name] && !this.#invert) || (!data[this.#entry.name] && this.#invert)) {
-      final.style.display = this.#entry.display;
-    } else {
-      final.style.display = 'none';
+      final.setAttribute('hidden', 'hidden');
+    } else if (fina.hasAttribute('hidden')) {
+      final.removeAttribute('hidden');
     }
   }
 }
@@ -123,7 +140,7 @@ class ForeachManipulator {
 
   #dispatchEvents(nodes, data) {
     const event = new Event("tv-update");
-    event.detail = {nodes: nodes.filter(x => x.nodeType != Node.TEXT_NODE || x.nodeValue.trim() != ""), data: data}
+    event.detail = {nodes: nodes.filter(x => x.nodeType !== Node.TEXT_NODE || x.nodeValue.trim() !== ""), data: data}
     this.#entry.parent.dispatchEvent(event)
   }
 
@@ -134,28 +151,28 @@ class ForeachManipulator {
       return;
     }
     for (let row of data) {
-      const newNodes = [];
-      this.#manipulators.forEach(manipulator => manipulator.update(row));
+      const newNodes = []
+      this.#manipulators.forEach(manipulator => manipulator.update(row))
       this.#entry.template.forEach(x => {
-        const newNode = x.cloneNode(true);
-        newNodes.push(newNode);
-        this.#entry.parent.appendChild(newNode);
+        const newNode = x.cloneNode(true)
+        newNodes.push(newNode)
+        this.#entry.parent.appendChild(newNode)
       });
-      this.#dispatchEvents(newNodes, row);
+      this.#dispatchEvents(newNodes, row)
     }
   }
 
   set (key, data) {
-    const newNodes = [];
-    this.#manipulators.forEach(manipulator => manipulator.update(data));
+    const newNodes = []
+    this.#manipulators.forEach(manipulator => manipulator.update(data))
 
     this.#entry.template.forEach((x, offset) => {
-      const newNode = x.cloneNode(true);
+      const newNode = x.cloneNode(true)
       newNodes.push(newNode);
       if (key * this.#entry.template.length + offset === this.#entry.parent.childNodes.length) {
         this.#entry.parent.appendChild(newNode);
       } else {
-        this.#entry.parent.replaceChild(newNode, this.#entry.parent.childNodes[key * this.#entry.template.length + offset]);
+        this.#entry.parent.replaceChild(newNode, this.#entry.parent.childNodes[key * this.#entry.template.length + offset])
       }
     });
     this.#dispatchEvents(newNodes, data);
@@ -174,20 +191,23 @@ const DomManipulators = {
       variable.forEach(entry => {
         switch (entry.type) {
           case 'text':
-            manipulator = new TextNodeManipulator(entry);
+            manipulator = new TextNodeManipulator(entry)
             break;
           case 'attribute':
-            manipulator = new AttributeManipulator(entry);
+            manipulator = new AttributeManipulator(entry)
             break;
           case 'truth':
-            manipulator = new TruthAttributeManipulator(entry, false);
+            manipulator = new TruthAttributeManipulator(entry, false)
             break;
           case 'not-truth':
-            manipulator = new TruthAttributeManipulator(entry, true);
+            manipulator = new TruthAttributeManipulator(entry, true)
             break;
           case 'foreach':
-            manipulator = new ForeachManipulator(entry, bindingDetails);
+            manipulator = new ForeachManipulator(entry, bindingDetails)
             break;
+          case 'set':
+            manipulator = new SetManipulator(entry)
+            break
           default: throw `Unknown type ${entry.type}`
         }
         manipulator.variables = entry;
@@ -198,6 +218,7 @@ const DomManipulators = {
     return manipulators;
   }
 }
+
 
 
 
@@ -313,7 +334,7 @@ class DomParser {
     constructor() {
         this.#textParser = new TextParser()
         this.#attributeRegexes = [
-            "tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"
+            "tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-set)-([a-z0-9_\-]+)", "(tv-).*"
         ].map(regex => new RegExp(regex, 'i'))
     }
 
@@ -340,7 +361,7 @@ class DomParser {
     #mergeVariables(into, from) {
         from.forEach((details, variable) => {
             if (into.has(variable)) {
-                into.get(variable).concat(details)
+                into.set(variable, into.get(variable).concat(details))
             } else {
                 into.set(variable, details)
             }
@@ -368,7 +389,7 @@ class DomParser {
                 if (!match) continue
 
                 if (match[1] === 'tv-value') {
-                    // Extract and create attribute nodes on the fly.
+                    // Extract and set attribute node values on the fly.
                     const attributeNode = document.createAttribute(match[2])
                     const parsed = this.#textParser.parse(attribute.value)
                     node.setAttributeNode(attributeNode)
@@ -384,6 +405,16 @@ class DomParser {
                             }
                         )
                     })
+                } else if (match[1] === 'tv-set') {
+                    // Extract and set the attribute node on the fly.
+                    this.#addNodeToVariable(response.variables, attribute.value,
+                        {
+                            node: node,
+                            type: 'set',
+                            name: attribute.value,
+                            path: path,
+                            attribute: match[2],
+                        })
                 } else if (match[0] === 'tv-true') {
                     // Hide and display nodes according to the truthiness of variables.
                     this.#addNodeToVariable(response.variables, attribute.value,

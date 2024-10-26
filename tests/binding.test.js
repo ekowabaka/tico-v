@@ -53,8 +53,8 @@ test("binds attributes to a dom element", () => {
     const view = bind(document.getElementById('wrapper'))
     view.data = {value: "Some Data!"}
 
-    expect(document.body.querySelector("#wrapper > div").hasAttribute('attrib')).toEqual(true);
-    expect(document.body.querySelector("#wrapper > div").getAttribute('attrib')).toEqual("Some Data!");
+    expect(document.body.querySelector("#wrapper > div").hasAttribute('attrib')).toEqual(true)
+    expect(document.body.querySelector("#wrapper > div").getAttribute('attrib')).toEqual("Some Data!")
 
     view.data.value = "Changed!"
     expect(document.body.querySelector("#wrapper > div").getAttribute("attrib")).toEqual("Changed!")
@@ -70,9 +70,9 @@ test("shows or hides dom nodes", () => {
 
     const view = bind(document.getElementById('wrapper'))
     view.data = {shown: false}
-    expect(document.body.querySelector("#wrapper > div").getAttribute("style")).toEqual("display: none;");
+    expect(document.body.querySelector("#wrapper > div").hidden).toEqual(true)
     view.data = {shown: true}
-    expect(document.body.querySelector("#wrapper > div").getAttribute("style")).toEqual("");
+    expect(document.body.querySelector("#wrapper > div").hidden).toEqual(false)
 })
 
 test("inversely shows or hides dom nodes", () => {
@@ -85,9 +85,9 @@ test("inversely shows or hides dom nodes", () => {
 
     const view = bind(document.getElementById('wrapper'))
     view.data = {inverseShown: false}
-    expect(document.body.querySelector("#wrapper > div").getAttribute("style")).toEqual(null);
+    expect(document.body.querySelector("#wrapper > div").hidden).toEqual(false)
     view.data = {inverseShown: true}
-    expect(document.body.querySelector("#wrapper > div").getAttribute("style")).toEqual("display: none;");
+    expect(document.body.querySelector("#wrapper > div").hidden).toEqual(true)
 })
 
 test("binding over foreach items", () => {
@@ -112,4 +112,40 @@ test("binding over foreach items", () => {
 
     expect(document.body.querySelector("#wrapper").getAttribute("class")).toEqual("anewclass");
     expect(document.body.querySelector("#wrapper").children).toHaveLength(3)
+})
+
+test("repeated value as attribute and node", () => {
+    document.body.innerHTML = `
+    <html>
+        <head></head>
+        <body>
+            <div id="wrapper">
+                    <span>{{description}}</span>
+                    <span>{{description}}</span>
+            </div>
+        </body>
+    </html>`
+    const view = bind(document.getElementById('wrapper'))
+    view.data = {
+        description: 'descriptionz'
+    }
+
+    document.body.querySelectorAll("#wrapper div").forEach(x => {
+        expect(x.innerHTML).toEqual("descriptionz")
+    })
+})
+
+test("set to add boolean attributes to nodes", () => {
+    document.body.innerHTML = `
+    <html>
+        <head><title>A test page</title></head>
+        <body>
+            <div id="wrapper"><input type="checkbox" tv-set-checked="show" /></div>
+        </body>
+    </html>`
+    const view = bind(document.getElementById('wrapper'))
+    view.data = {
+        show: true
+    }
+    console.log(document.body.innerHTML)
 })

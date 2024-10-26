@@ -98,7 +98,7 @@ class DomParser {
     constructor() {
         this.#textParser = new TextParser()
         this.#attributeRegexes = [
-            "tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-).*"
+            "tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-set)-([a-z0-9_\-]+)", "(tv-).*"
         ].map(regex => new RegExp(regex, 'i'))
     }
 
@@ -125,7 +125,7 @@ class DomParser {
     #mergeVariables(into, from) {
         from.forEach((details, variable) => {
             if (into.has(variable)) {
-                into.get(variable).concat(details)
+                into.set(variable, into.get(variable).concat(details))
             } else {
                 into.set(variable, details)
             }
@@ -153,7 +153,7 @@ class DomParser {
                 if (!match) continue
 
                 if (match[1] === 'tv-value') {
-                    // Extract and create attribute nodes on the fly.
+                    // Extract and set attribute node values on the fly.
                     const attributeNode = document.createAttribute(match[2])
                     const parsed = this.#textParser.parse(attribute.value)
                     node.setAttributeNode(attributeNode)
@@ -169,6 +169,16 @@ class DomParser {
                             }
                         )
                     })
+                } else if (match[1] === 'tv-set') {
+                    // Extract and set the attribute node on the fly.
+                    this.#addNodeToVariable(response.variables, attribute.value,
+                        {
+                            node: node,
+                            type: 'set',
+                            name: attribute.value,
+                            path: path,
+                            attribute: match[2],
+                        })
                 } else if (match[0] === 'tv-true') {
                     // Hide and display nodes according to the truthiness of variables.
                     this.#addNodeToVariable(response.variables, attribute.value,

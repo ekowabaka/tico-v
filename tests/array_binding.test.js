@@ -78,3 +78,19 @@ test("add to view array", () => {
     expect(wrapper.children[2].id).toEqual("3")
 })
 
+test("set to add boolean attributes to list of nodes", () => {
+    document.body.innerHTML = `
+    <html>
+        <head><title>A test page</title></head>
+        <body>
+            <ul tv-foreach="checks" id="wrapper">
+                <li><input type="checkbox" tv-set-checked="show" /></li>
+            </ul>
+        </body>
+    </html>`
+    const view = bind(document.getElementById('wrapper'))
+    view.data = {
+        checks: [{show: false}, {show: true}, {show: false}, {show: false}, {show: false}],
+    }
+    console.log(document.body.innerHTML)
+})

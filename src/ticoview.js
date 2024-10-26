@@ -4,7 +4,7 @@ import { UpdateHandler } from "./update_handlers.js"
 
 
 /**
- * A view contains the dom elements with associated tico-v tags that can be bound to data items.
+ * A view contains the DOM elements to be manipulated by Tico-V.
  */
 class View {
 
