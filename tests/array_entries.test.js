@@ -116,4 +116,6 @@ test("pushing extra values into array", () => {
     view.data = {second: [], interesting: [{value:'1'},{value: '3'}]}
     view.data.interesting.push({value:'2'})
     console.log(document.body.innerHTML)
+    view.data.interesting.push({value:'4'})
+    console.log(document.body.innerHTML)
 })
