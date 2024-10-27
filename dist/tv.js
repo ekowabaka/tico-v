@@ -24,7 +24,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /**
  * manipulators.js
- * 
+ *
  * Tico-V directly manipulates the DOM with the manipulators defined in this file. Each of these manipulators can
  * be attached to particular tico-v elements within the DOM. Whenever data changes, manipulators are called to update
  * the DOM.
@@ -32,191 +32,205 @@ __webpack_require__.r(__webpack_exports__);
 
 /**
  * A utility function for rendering a text string when given a the parsed tree genereted by the text parser.
- * 
- * @param {Array} structure 
- * @param {Object} data 
+ *
+ * @param {Array} structure
+ * @param {Object} data
  */
 function renderText(structure, data) {
-  return structure.reduce((string, segment) => {
-    switch (segment.type) {
-      case 'var': return string + data[segment.name];
-      case 'txt': return string + segment.value;
-      case 'cond': return string + (data[segment.var1] ? data[segment.var1] : data[segment.var2]);
-      case 'condstr': return string + (data[segment.var1] ? segment.var2 : "");
-      case 'condstrelse': return string + (data[segment.var1] ? segment.var2 : segment.var3);
-    }
-  }, "");
+    return structure.reduce((string, segment) => {
+        switch (segment.type) {
+            case 'var':
+                return string + data[segment.name];
+            case 'txt':
+                return string + segment.value;
+            case 'cond':
+                return string + (data[segment.var1] ? data[segment.var1] : data[segment.var2]);
+            case 'condstr':
+                return string + (data[segment.var1] ? segment.var2 : "");
+            case 'condstrelse':
+                return string + (data[segment.var1] ? segment.var2 : segment.var3);
+        }
+    }, "");
 }
 
 /**
  * Responsible for manipulating text nodes in the DOM.
- * 
- * @param {Object} entry 
+ *
+ * @param {Object} entry
  */
 class TextNodeManipulator {
 
-  #entry
+    #entry
 
-  constructor(entry) {
-    this.#entry = entry
-  }
+    constructor(entry) {
+        this.#entry = entry
+    }
 
-  update(data, node) {
-    (node || this.#entry.node).textContent = renderText(this.#entry.structure, data)
-  }
+    update(data, node) {
+        (node || this.#entry.node).textContent = renderText(this.#entry.structure, data)
+    }
 }
 
 
 /**
  * Responsible for manipulating the values of attributes on DOM elements.
- * 
- * @param {Object} entry 
+ *
+ * @param {Object} entry
  */
 class AttributeManipulator {
-  #entry
+    #entry
 
-  constructor(entry) {
-    this.#entry = entry
-  }
+    constructor(entry) {
+        this.#entry = entry
+    }
 
-  update(data, node) {
-    (node || this.#entry.node).value = renderText(this.#entry.structure, data)
-  }
+    update(data, node) {
+        (node || this.#entry.node).value = renderText(this.#entry.structure, data)
+    }
 }
 
 class SetManipulator {
-  #entry
+    #entry
 
-  constructor(entry) {
-    this.#entry = entry
-  }
-
-  update(data, node) {
-    const final = node || this.#entry.node
-    if (data[this.#entry.name]) {
-      final.setAttribute(this.#entry.attribute, this.#entry.attribute);
-    } else if (final.hasAttribute(this.#entry.attribute)) {
-      final.removeAttribute(this.#entry.attribute)
+    constructor(entry) {
+        this.#entry = entry
     }
-  }
+
+    update(data, node) {
+        const final = node || this.#entry.node
+        if (data[this.#entry.name]) {
+            final.setAttribute(this.#entry.attribute, this.#entry.attribute);
+        } else if (final.hasAttribute(this.#entry.attribute)) {
+            final.removeAttribute(this.#entry.attribute)
+        }
+    }
 }
 
 /**
  * Responsible for showing or hiding nodes based on the data passed.
- * 
- * @param {Object} entry 
- * @param {boolean} invert 
+ *
+ * @param {Object} entry
+ * @param {boolean} invert
  */
 class TruthAttributeManipulator {
 
-  #entry
-  #invert
+    #entry
+    #invert
 
-  constructor(entry, invert) {
-    this.#entry = entry
-    this.#invert = invert
-  }
-
-  update(data, node) {
-    const final = node || this.#entry.node
-    if ((data[this.#entry.name] && !this.#invert) || (!data[this.#entry.name] && this.#invert)) {
-      final.setAttribute('hidden', 'hidden');
-    } else if (fina.hasAttribute('hidden')) {
-      final.removeAttribute('hidden');
+    constructor(entry, invert) {
+        this.#entry = entry
+        this.#invert = invert
     }
-  }
+
+    update(data, node) {
+        const final = node || this.#entry.node
+        if ((data[this.#entry.name] && !this.#invert) || (!data[this.#entry.name] && this.#invert)) {
+            if (final.hasAttribute('hidden')) {
+                final.removeAttribute('hidden');
+            }
+        } else {
+            final.setAttribute('hidden', 'hidden');
+        }
+    }
 }
 
 class ForeachManipulator {
 
-  #entry
-  #manipulators
+    #entry
+    #manipulators
 
-  constructor(entry, bindingDetails) {
-    this.#entry = entry
-    this.#manipulators = DomManipulators.create(entry.variables, bindingDetails)
-    this.#entry.manipulators = this.#manipulators
-  }
-
-  #dispatchEvents(nodes, data) {
-    const event = new Event("tv-update");
-    event.detail = {nodes: nodes.filter(x => x.nodeType !== Node.TEXT_NODE || x.nodeValue.trim() !== ""), data: data}
-    this.#entry.parent.dispatchEvent(event)
-  }
-
-  update (data) {
-    data = data[this.#entry.name];
-    this.#entry.parent.innerHTML = "";
-    if (!Array.isArray(data)) {
-      return;
+    constructor(entry, bindingDetails) {
+        this.#entry = entry
+        this.#manipulators = DomManipulators.create(entry.variables, bindingDetails)
+        this.#entry.manipulators = this.#manipulators
     }
-    for (let row of data) {
-      const newNodes = []
-      this.#manipulators.forEach(manipulator => manipulator.update(row))
-      this.#entry.template.forEach(x => {
-        const newNode = x.cloneNode(true)
-        newNodes.push(newNode)
-        this.#entry.parent.appendChild(newNode)
-      });
-      this.#dispatchEvents(newNodes, row)
+
+    #dispatchEvents(nodes, data) {
+        const event = new Event("tv-update");
+        event.detail = {
+            nodes: nodes.filter(x => x.nodeType !== Node.TEXT_NODE || x.nodeValue.trim() !== ""),
+            data: data
+        }
+        this.#entry.parent.dispatchEvent(event)
     }
-  }
 
-  set (key, data) {
-    const newNodes = []
-    this.#manipulators.forEach(manipulator => manipulator.update(data))
+    update(data) {
+        data = data[this.#entry.name];
+        this.#entry.parent.innerHTML = "";
+        if (!Array.isArray(data)) {
+            return;
+        }
+        for (let row of data) {
+            const newNodes = []
+            this.#manipulators.forEach(x => x.forEach(manipulator => manipulator.update(row)))
+            this.#entry.template.forEach(x => {
+                const newNode = x.cloneNode(true)
+                newNodes.push(newNode)
+                this.#entry.parent.appendChild(newNode)
+            });
+            this.#dispatchEvents(newNodes, row)
+        }
+    }
 
-    this.#entry.template.forEach((x, offset) => {
-      const newNode = x.cloneNode(true)
-      newNodes.push(newNode);
-      if (key * this.#entry.template.length + offset === this.#entry.parent.childNodes.length) {
-        this.#entry.parent.appendChild(newNode);
-      } else {
-        this.#entry.parent.replaceChild(newNode, this.#entry.parent.childNodes[key * this.#entry.template.length + offset])
-      }
-    });
-    this.#dispatchEvents(newNodes, data);
-  }
+    set(key, data) {
+        const newNodes = []
+        this.#manipulators.forEach(x => x.forEach(manipulator => manipulator.update(data)))
+
+        this.#entry.template.forEach((x, offset) => {
+            const newNode = x.cloneNode(true)
+            newNodes.push(newNode);
+            if (key * this.#entry.template.length + offset === this.#entry.parent.childNodes.length) {
+                this.#entry.parent.appendChild(newNode);
+            } else {
+                this.#entry.parent.replaceChild(newNode, this.#entry.parent.childNodes[key * this.#entry.template.length + offset])
+            }
+        });
+        this.#dispatchEvents(newNodes, data);
+    }
 }
 
 /**
  * A factory for creating manipulators based on the type of the entry.
  */
-const DomManipulators = {
-  create: function (variables, bindingDetails) {
-    let manipulators = [];
-    let manipulator;
+class DomManipulators {
+    static create(variables, bindingDetails) {
+        // let manipulators = [];
+        const manipulators = new Map()
+        let manipulator;
 
-    variables.forEach(variable => {
-      variable.forEach(entry => {
-        switch (entry.type) {
-          case 'text':
-            manipulator = new TextNodeManipulator(entry)
-            break;
-          case 'attribute':
-            manipulator = new AttributeManipulator(entry)
-            break;
-          case 'truth':
-            manipulator = new TruthAttributeManipulator(entry, false)
-            break;
-          case 'not-truth':
-            manipulator = new TruthAttributeManipulator(entry, true)
-            break;
-          case 'foreach':
-            manipulator = new ForeachManipulator(entry, bindingDetails)
-            break;
-          case 'set':
-            manipulator = new SetManipulator(entry)
-            break
-          default: throw `Unknown type ${entry.type}`
-        }
-        manipulator.variables = entry;
-        manipulators.push(manipulator);
-      });
-    });
+        variables.forEach((entries, variable) => {
+            const variableManipulators = []
+            entries.forEach(entry => {
+                switch (entry.type) {
+                    case 'text':
+                        manipulator = new TextNodeManipulator(entry)
+                        break;
+                    case 'attribute':
+                        manipulator = new AttributeManipulator(entry)
+                        break;
+                    case 'truth':
+                        manipulator = new TruthAttributeManipulator(entry, false)
+                        break;
+                    case 'not-truth':
+                        manipulator = new TruthAttributeManipulator(entry, true)
+                        break;
+                    case 'foreach':
+                        manipulator = new ForeachManipulator(entry, bindingDetails)
+                        break;
+                    case 'set':
+                        manipulator = new SetManipulator(entry)
+                        break
+                    default:
+                        throw `Unknown type ${entry.type}`
+                }
+                manipulator.variables = entry;
+                variableManipulators.push(manipulator);
+            });
+            manipulators.set(variable, variableManipulators)
+        });
 
-    return manipulators;
-  }
+        return manipulators;
+    }
 }
 
 
@@ -569,7 +583,7 @@ class ArrayUpdateHandler {
             });
             return true;
         }
-        this.#manipulators.forEach(x => x.set != undefined && x.set(name, target[name]));
+        this.#manipulators.forEach(manipulator => manipulator.set !== undefined && manipulator.set(name, target[name])) //(x => x.set !== undefined && x.set(name, target[name]))
         return true;
     }
 }
@@ -589,7 +603,7 @@ class UpdateHandler {
 
     get(target, name) {
         if (typeof target[name] === 'object' && Array.isArray(target[name]) && this.#variables.get(name)[0].type === "foreach") {
-            const updateHandler = new ArrayUpdateHandler(this.#variables.get(name), this.#manipulators);
+            const updateHandler = new ArrayUpdateHandler(this.#variables.get(name), this.#manipulators.get(name));
             return new Proxy(target[name], updateHandler);
         } else if (typeof target[name] === 'object') {
             return target[name];
@@ -600,12 +614,12 @@ class UpdateHandler {
 
     set(target, name, value) {
         target[name] = value;
-        this.run(target);
+        this.run(target, name);
         return true;
     }
 
-    run(target) {
-        this.#manipulators.forEach(manipulator => {
+    run(target, name) {
+        this.#manipulators.get(name).forEach(manipulator => {
             let manipulatedNode = undefined;
             if (this.#node) {
                 const baseNode = manipulator.variables.path === "" ? this.#node : this.#node.querySelector(manipulator.variables.path);
@@ -701,7 +715,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * A view contains the dom elements with associated tico-v tags that can be bound to data items.
+ * A view contains the DOM elements to be manipulated by Tico-V.
  */
 class View {
 
@@ -715,7 +729,7 @@ class View {
    * @param {*} manipulators
    */
   constructor(variables, manipulators) {
-    this.#dataProxy = new Proxy({}, new _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__.UpdateHandler(variables, manipulators))
+    // this.#dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators))
     this.#variables = variables
     this.#manipulators = manipulators
   }
@@ -727,7 +741,7 @@ class View {
   set data(newData) {
     let updateHandler = new _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__.UpdateHandler(this.#variables, this.#manipulators)
     this.#dataProxy = new Proxy(newData, updateHandler)
-    updateHandler.run(newData)
+    this.#variables.keys().forEach(x => updateHandler.run(newData, x))
   }
 
   /**

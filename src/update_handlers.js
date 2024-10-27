@@ -45,7 +45,7 @@ class ArrayUpdateHandler {
             });
             return true;
         }
-        this.#manipulators.forEach(x => x.set != undefined && x.set(name, target[name]));
+        this.#manipulators.forEach(manipulator => manipulator.set !== undefined && manipulator.set(name, target[name])) //(x => x.set !== undefined && x.set(name, target[name]))
         return true;
     }
 }
@@ -65,7 +65,7 @@ class UpdateHandler {
 
     get(target, name) {
         if (typeof target[name] === 'object' && Array.isArray(target[name]) && this.#variables.get(name)[0].type === "foreach") {
-            const updateHandler = new ArrayUpdateHandler(this.#variables.get(name), this.#manipulators);
+            const updateHandler = new ArrayUpdateHandler(this.#variables.get(name), this.#manipulators.get(name));
             return new Proxy(target[name], updateHandler);
         } else if (typeof target[name] === 'object') {
             return target[name];
@@ -76,12 +76,12 @@ class UpdateHandler {
 
     set(target, name, value) {
         target[name] = value;
-        this.run(target);
+        this.run(target, name);
         return true;
     }
 
-    run(target) {
-        this.#manipulators.forEach(manipulator => {
+    run(target, name) {
+        this.#manipulators.get(name).forEach(manipulator => {
             let manipulatedNode = undefined;
             if (this.#node) {
                 const baseNode = manipulator.variables.path === "" ? this.#node : this.#node.querySelector(manipulator.variables.path);

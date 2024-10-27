@@ -18,7 +18,7 @@ class View {
    * @param {*} manipulators
    */
   constructor(variables, manipulators) {
-    this.#dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators))
+    // this.#dataProxy = new Proxy({}, new UpdateHandler(variables, manipulators))
     this.#variables = variables
     this.#manipulators = manipulators
   }
@@ -30,7 +30,7 @@ class View {
   set data(newData) {
     let updateHandler = new UpdateHandler(this.#variables, this.#manipulators)
     this.#dataProxy = new Proxy(newData, updateHandler)
-    updateHandler.run(newData)
+    this.#variables.keys().forEach(x => updateHandler.run(newData, x))
   }
 
   /**

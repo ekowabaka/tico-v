@@ -147,5 +147,10 @@ test("set to add boolean attributes to nodes", () => {
     view.data = {
         show: true
     }
-    console.log(document.body.innerHTML)
+
+    expect(document.body.querySelector("#wrapper > input").hasAttribute('checked')).toEqual(true)
+    expect(document.body.querySelector("#wrapper > input").getAttribute('checked')).toEqual('checked')
+
+    view.data.show = false
+    expect(document.body.querySelector("#wrapper > input").hasAttribute('checked')).toEqual(false)
 })

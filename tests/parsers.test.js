@@ -94,7 +94,6 @@ test("parse spaced conditions", () => {
         '%s', `<div tv-value-title="This is {{ ifthis ?  that  }}">`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
-    // console.log(variables)
     expect(variables.size).toBe(2)
     expect(variables.has('ifthis')).toEqual(true)
     expect(variables.has('that')).toEqual(true)
