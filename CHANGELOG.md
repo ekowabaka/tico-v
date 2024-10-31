@@ -1,5 +1,9 @@
 Changelog
 =========
+2024-10-31 - v0.4.1
+-------------------
+- Fixes wrong `package.json` entry.
+
 2024-10-31 - v0.4.0
 -------------------
 - Adds a new tag, `tv-set`, for setting boolean attributes (like hidden and checked) on elements.
