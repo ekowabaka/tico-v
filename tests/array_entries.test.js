@@ -94,8 +94,10 @@ test("pushing values into array", () => {
     </html>`
     const view = bind(document.getElementById('wrapper'))
     view.data = {interesting: [{value:'1'},{value: '3'}]}
+    expect(document.body.querySelector("#wrapper").children).toHaveLength(2)
+    expect(document.body.querySelector("#wrapper").children.item(0).innerHTML).toEqual('1')
     view.data.interesting.push({value:'2'})
-    console.log(document.body.innerHTML)
+    expect(document.body.querySelector("#wrapper").children).toHaveLength(3)
 })
 
 test("pushing extra values into array", () => {
@@ -114,8 +116,11 @@ test("pushing extra values into array", () => {
     </html>`
     const view = bind(document.getElementById('wrapper'))
     view.data = {second: [], interesting: [{value:'1'},{value: '3'}]}
+    expect(document.body.querySelector("#wrapper").children).toHaveLength(2)
+    expect(document.body.querySelector("#wrapper > div:nth-child(1)").children).toHaveLength(2)
+    expect(document.body.querySelector("#wrapper > div:nth-child(2)").children).toHaveLength(0)
     view.data.interesting.push({value:'2'})
-    console.log(document.body.innerHTML)
+    expect(document.body.querySelector("#wrapper > div:nth-child(1)").children).toHaveLength(3)
     view.data.interesting.push({value:'4'})
-    console.log(document.body.innerHTML)
+    expect(document.body.querySelector("#wrapper > div:nth-child(1)").children).toHaveLength(4)
 })

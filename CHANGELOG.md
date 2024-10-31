@@ -1,5 +1,10 @@
 Changelog
 =========
+2024-10-31 - v0.4.0
+-------------------
+- Adds a new tag, `tv-set`, for setting boolean attributes, like hidden and checked, on elements.
+- Fixes bugs in the `tv-foreach` tag, which made the output of pages with multiple foreach elements inconsistent.
+
 2024-10-22 - v0.3.2
 -------------------
 - Adds correct build artifacts.
