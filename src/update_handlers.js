@@ -45,7 +45,7 @@ class ArrayUpdateHandler {
             });
             return true;
         }
-        this.#manipulators.forEach(manipulator => manipulator.set !== undefined && manipulator.set(name, target[name])) //(x => x.set !== undefined && x.set(name, target[name]))
+        this.#manipulators.forEach(manipulator => manipulator.set !== undefined && manipulator.set(name, target[name]))
         return true;
     }
 }

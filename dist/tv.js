@@ -740,7 +740,10 @@ class View {
     set data(newData) {
         let updateHandler = new _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__.UpdateHandler(this.#variables, this.#manipulators)
         this.#dataProxy = new Proxy(newData, updateHandler)
-        this.#variables.keys().forEach(x => updateHandler.run(newData, x))
+        for(let x of this.#variables.keys()) {
+            updateHandler.run(newData, x)
+        }
+        //this.#variables.keys().forEach(x => updateHandler.run(newData, x))
     }
 
     /**

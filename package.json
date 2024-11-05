@@ -1,6 +1,6 @@
 {
   "name": "tico-v",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Lightweight data binding and templating for Javascript",
   "type": "module",
   "main": "src/ticoview.js",

@@ -1,5 +1,9 @@
 Changelog
 =========
+Unreleased 
+----------
+- Fixes a bug that prevents ticoview from working in Safari and other webkit based browsers (like Gnome Web).
+
 2024-10-31 - v0.4.1
 -------------------
 - Fixes wrong `package.json` entry.

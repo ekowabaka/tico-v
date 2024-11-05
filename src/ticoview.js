@@ -29,7 +29,9 @@ class View {
     set data(newData) {
         let updateHandler = new UpdateHandler(this.#variables, this.#manipulators)
         this.#dataProxy = new Proxy(newData, updateHandler)
-        this.#variables.keys().forEach(x => updateHandler.run(newData, x))
+        for(let x of this.#variables.keys()) {
+            updateHandler.run(newData, x)
+        }
     }
 
     /**
