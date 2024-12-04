@@ -3,6 +3,7 @@ Changelog
 Unreleased 
 ----------
 - Fixes a bug that prevents ticoview from working in Safari and other webkit based browsers (like Gnome Web).
+- Fixes a bug that causes ticoview to crash when a variable being changed has no corresponding DOM elements to manipulate.
 
 2024-10-31 - v0.4.1
 -------------------
