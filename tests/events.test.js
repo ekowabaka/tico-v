@@ -17,7 +17,7 @@ test("triggering events after items are added", () => {
     </html>`
 
     const view = bind(document.getElementById('wrapper'))
-    
+
     view.data = {
         items: [
             {id: '1', subitems: "One"}, {id: '2', text: "Two"},
