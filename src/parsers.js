@@ -252,81 +252,9 @@ class DomParser {
                 const hasRaw = parsed.structure.some(s => s.type === 'raw');
 
                 if (hasRaw) {
-                    // Split the text node into multiple nodes
-                    const segments = [];
-                    let current = { type: 'text', structure: [], variables: new Set() };
-
-                    parsed.structure.forEach(s => {
-                        if (s.type === 'raw') {
-                            if (current.structure.length > 0) {
-                                segments.push(current);
-                                current = { type: 'text', structure: [], variables: new Set() };
-                            }
-                            segments.push({ type: 'raw', name: s.name });
-                        } else {
-                            current.structure.push(s);
-                            if (s.name) current.variables.add(s.name);
-                            if (s.var1) current.variables.add(s.var1);
-                            if (s.var2) current.variables.add(s.var2);
-                            if (s.var3) current.variables.add(s.var3);
-                        }
-                    });
-                    if (current.structure.length > 0) segments.push(current);
-
-                    const parent = child.parentNode || node;
-                    const newNodes = [];
-                    segments.forEach((segment) => {
-                        if (segment.type === 'raw') {
-                            const placeholder = document.createElement('span');
-                            placeholder.style.display = 'contents';
-                            newNodes.push(placeholder);
-                        } else {
-                            const newTextNode = document.createTextNode("");
-                            newTextNode.textContent = segment.structure.reduce((str, s) => {
-                                return str + (s.type === 'txt' ? s.value : "");
-                            }, "");
-                            newNodes.push(newTextNode);
-                        }
-                    });
-
-                    // Replace the old text node with new nodes in the actual DOM or template
-                    newNodes.forEach((newNode) => {
-                        parent.insertBefore(newNode, child);
-                    });
-                    parent.removeChild(child);
-
-                    // Now bind variables to the actual nodes in the DOM
-                    segments.forEach((segment, sIndex) => {
-                        const actualNode = newNodes[sIndex];
-                        const actualIndex = Array.from(parent.childNodes).indexOf(actualNode);
-                        
-                        if (segment.type === 'raw') {
-                            this.#addNodeToVariable(variables, segment.name, {
-                                node: actualNode,
-                                type: 'raw',
-                                name: segment.name,
-                                path: path,
-                                index: actualIndex
-                            });
-                            n++;
-                        } else {
-                            segment.variables.forEach(variable => {
-                                this.#addNodeToVariable(variables, variable, {
-                                    node: actualNode,
-                                    type: 'text',
-                                    structure: segment.structure,
-                                    path: path,
-                                    index: actualIndex
-                                });
-                            });
-                        }
-                    });
-
-                    if (attributes.parentVariable) {
-                        // Update the template array for foreach
-                        children.splice(index + indexOffset, 1, ...newNodes);
-                    }
-                    indexOffset += newNodes.length - 1;
+                    const result = this.#handleRawSegments(child, node, parsed, variables, path, attributes, children, index, indexOffset, n);
+                    indexOffset = result.indexOffset;
+                    n = result.n;
                 } else {
                     parsed.variables.forEach(variable => {
                         this.#addNodeToVariable(variables, variable,
@@ -352,6 +280,89 @@ class DomParser {
         });
 
         return variables
+    }
+
+    /**
+     * Handle the splitting of a text node when it contains raw variable segments.
+     */
+    #handleRawSegments(child, node, parsed, variables, path, attributes, children, index, indexOffset, n) {
+        // Split the text node into multiple nodes
+        const segments = [];
+        let current = { type: 'text', structure: [], variables: new Set() };
+
+        parsed.structure.forEach(s => {
+            if (s.type === 'raw') {
+                if (current.structure.length > 0) {
+                    segments.push(current);
+                    current = { type: 'text', structure: [], variables: new Set() };
+                }
+                segments.push({ type: 'raw', name: s.name });
+            } else {
+                current.structure.push(s);
+                if (s.name) current.variables.add(s.name);
+                if (s.var1) current.variables.add(s.var1);
+                if (s.var2) current.variables.add(s.var2);
+                if (s.var3) current.variables.add(s.var3);
+            }
+        });
+        if (current.structure.length > 0) segments.push(current);
+
+        const parent = child.parentNode || node;
+        const newNodes = [];
+        segments.forEach((segment) => {
+            if (segment.type === 'raw') {
+                const placeholder = document.createElement('span');
+                placeholder.style.display = 'contents';
+                newNodes.push(placeholder);
+            } else {
+                const newTextNode = document.createTextNode("");
+                newTextNode.textContent = segment.structure.reduce((str, s) => {
+                    return str + (s.type === 'txt' ? s.value : "");
+                }, "");
+                newNodes.push(newTextNode);
+            }
+        });
+
+        // Replace the old text node with new nodes in the actual DOM or template
+        newNodes.forEach((newNode) => {
+            parent.insertBefore(newNode, child);
+        });
+        parent.removeChild(child);
+
+        // Now bind variables to the actual nodes in the DOM
+        segments.forEach((segment, sIndex) => {
+            const actualNode = newNodes[sIndex];
+            const actualIndex = Array.from(parent.childNodes).indexOf(actualNode);
+
+            if (segment.type === 'raw') {
+                this.#addNodeToVariable(variables, segment.name, {
+                    node: actualNode,
+                    type: 'raw',
+                    name: segment.name,
+                    path: path,
+                    index: actualIndex
+                });
+                n++;
+            } else {
+                segment.variables.forEach(variable => {
+                    this.#addNodeToVariable(variables, variable, {
+                        node: actualNode,
+                        type: 'text',
+                        structure: segment.structure,
+                        path: path,
+                        index: actualIndex
+                    });
+                });
+            }
+        });
+
+        if (attributes.parentVariable) {
+            // Update the template array for foreach
+            children.splice(index + indexOffset, 1, ...newNodes);
+        }
+        indexOffset += newNodes.length - 1;
+
+        return { indexOffset, n };
     }
 
     /**
