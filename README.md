@@ -44,7 +44,11 @@ Templates for tiCo-v are written directly into the HTML markup of your the page.
 
 ### Text Substitutions
 Text substitutions are primarily performed with the `?` operator. This operator can operate in a coalescing or tenary mode, depending on the syntax.
-From the example, we should see that text substitutions are performed with variables specified in curly braces (e.g. ``{{variable}}``). Conditional substitution can be made with the "`?`" operator, which acts as some form of truthy coalescing. So, ``{{variable1 ? variable2}}`` implies the value of `variable1` will be displayed if it is truthy instead of the value of ``variable2``, which will displayed irrespective of its value. 
+From the example, we should see that text substitutions are performed with variables specified in curly braces (e.g. ``{{variable}}``). Any HTML content in these variables is automatically escaped for safety. 
+
+If you need to render raw HTML content, you can use triple curly braces: ``{{{variable}}}``. This will parse the string into DOM nodes and insert them safely into the document.
+
+Conditional substitution can be made with the "`?`" operator, which acts as some form of truthy coalescing. So, ``{{variable1 ? variable2}}`` implies the value of `variable1` will be displayed if it is truthy instead of the value of ``variable2``, which will displayed irrespective of its value. 
 
 Conditional substitutions can also involve literal text such as ``{{truth ? "when true" : "when false"}}``. In this case, the text ``when true`` is substituted if the variable ``truth`` is truthy and ``when false`` is displayed when it's false. For literal substitutions, the second literal to be displayed on a false value can be omitted and it's automatically replaced with an empty string.
 
