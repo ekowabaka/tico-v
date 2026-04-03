@@ -65,6 +65,24 @@ class AttributeManipulator {
     }
 }
 
+/**
+ * Responsible for manipulating nodes that should contain raw HTML.
+ *
+ * @param {Object} entry
+ */
+class RawHTMLManipulator {
+    #entry
+
+    constructor(entry) {
+        this.#entry = entry
+    }
+
+    update(data, node) {
+        const value = data[this.#entry.name];
+        (node || this.#entry.node).innerHTML = value !== undefined ? value : "";
+    }
+}
+
 class SetManipulator {
     #entry
 
@@ -183,6 +201,9 @@ class DomManipulators {
                         break;
                     case 'attribute':
                         manipulator = new AttributeManipulator(entry)
+                        break;
+                    case 'raw':
+                        manipulator = new RawHTMLManipulator(entry)
                         break;
                     case 'truth':
                         manipulator = new TruthAttributeManipulator(entry, false)

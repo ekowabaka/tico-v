@@ -64,6 +64,24 @@ test("parse variables", () => {
     ])
 })
 
+test("parse raw variables", () => {
+    document.body.innerHTML = layout.replace('%s',
+        `<div>{{{ raw_var }}} and {{ escaped_var }}</div>`
+    )
+    const variables = parser.parse(document.body.querySelector('#wrapper'))
+    expect(variables.size).toBe(2)
+    expect(variables.has('raw_var')).toEqual(true)
+    expect(variables.has('escaped_var')).toEqual(true)
+
+    const raw = variables.get('raw_var')[0]
+    expect(raw.type).toEqual('raw')
+    expect(raw.name).toEqual('raw_var')
+    
+    const escaped = variables.get('escaped_var')[0]
+    expect(escaped.type).toEqual('text')
+    expect(escaped.structure).toContainEqual({ type: 'var', name: 'escaped_var' })
+})
+
 test("parse conditions", () => {
     document.body.innerHTML = layout.replace(
         '%s', `<div tv-value-title="This is {{ifthis?that}}">`

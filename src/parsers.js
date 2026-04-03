@@ -4,6 +4,7 @@ class TextParser {
 
     constructor() {
         this.#regexes = {
+            rawVariable: new RegExp(`{{{\\s*([a-z][a-z0-9_]*)\\s*}}}`, 'i'),
             variable: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*}}`, 'i'),
             condstr: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*"([^"]*)"\\s*}}`, 'i'),
             condstrelse: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*"([^"]*)"\\s*:\\s*"([^"]*)"\\s*}}`, 'i'),
@@ -28,56 +29,69 @@ class TextParser {
     parse (text) {
         let values = [];
         let vars = new Set();
-        let order = ['variable', 'condstrelse', 'condstr', 'cond', 'text'];
+        let order = ['rawVariable', 'variable', 'condstrelse', 'condstr', 'cond', 'text'];
         let index = 0;
         let lastIndex = undefined;
 
         // Break the text up into specific identified chunks
         while (text.length > 0) {
-            let match = null;
+            let bestMatch = null;
+            let bestOrderType = null;
+
             if (lastIndex !== undefined && lastIndex === index) {
                 throw `Error parsing ${text}`
             }
             lastIndex = index;
 
-            // Loop through the regexes in the order specified
+            // Find the earliest match among all regexes
             for (let i in order) {
-                if (text.length === 0) break;
-                match = this.#regexes[order[i]].exec(text)
+                const match = this.#regexes[order[i]].exec(text)
                 if (match) {
-                    index = match.index + match[0].length
-                    switch (order[i]) {
-                        case 'variable':
-                            this.#pushLeadingText(text, match, values)
-                            values.push({type: 'var', name: match[1]})
-                            vars.add(match[1])
-                            text = text.substr(index, text.length - index)
-                            break;
-                        case 'condstr':
-                        case 'cond':
-                            this.#pushLeadingText(text, match, values);
-                            values.push({type: order[i], var1: match[1].trim(), var2: match[2].trim()})
-                            vars.add(match[1].trim())
-                            text = text.substr(index, text.length - index)
-                            if (order[i] === 'cond') vars.add(match[2].trim())
-                            break;
-                        case 'condstrelse':
-                            this.#pushLeadingText(text, match, values)
-                            values.push({type: 'condstrelse', var1: match[1], var2: match[2], var3: match[3]})
-                            vars.add(match[1])
-                            text = text.substr(index, text.length - index)
-                            break;
-                        case 'text':
-                            this.#pushLeadingText(text, match, values)
-                            text = text.substr(match.index, text.length - match.index)
-                            break
+                    if (bestMatch === null || match.index < bestMatch.index) {
+                        bestMatch = match;
+                        bestOrderType = order[i];
                     }
                 }
-                if (match) break
             }
 
-            // If none of the regexes match return the remaining part of the string as is
-            if (match === null && text.length > 0) {
+            if (bestMatch) {
+                const match = bestMatch;
+                const type = bestOrderType;
+                index = match.index + match[0].length
+                switch (type) {
+                    case 'rawVariable':
+                        this.#pushLeadingText(text, match, values)
+                        values.push({type: 'raw', name: match[1]})
+                        vars.add(match[1])
+                        text = text.substr(index, text.length - index)
+                        break;
+                    case 'variable':
+                        this.#pushLeadingText(text, match, values)
+                        values.push({type: 'var', name: match[1]})
+                        vars.add(match[1])
+                        text = text.substr(index, text.length - index)
+                        break;
+                    case 'condstr':
+                    case 'cond':
+                        this.#pushLeadingText(text, match, values);
+                        values.push({type: type, var1: match[1].trim(), var2: match[2].trim()})
+                        vars.add(match[1].trim())
+                        text = text.substr(index, text.length - index)
+                        if (type === 'cond') vars.add(match[2].trim())
+                        break;
+                    case 'condstrelse':
+                        this.#pushLeadingText(text, match, values)
+                        values.push({type: 'condstrelse', var1: match[1], var2: match[2], var3: match[3]})
+                        vars.add(match[1])
+                        text = text.substr(index, text.length - index)
+                        break;
+                    case 'text':
+                        this.#pushLeadingText(text, match, values)
+                        text = text.substr(match.index + 2, text.length - (match.index + 2))
+                        break
+                }
+            } else {
+                // If none of the regexes match return the remaining part of the string as is
                 values.push({type: 'txt', value: text})
                 break
             }
@@ -221,32 +235,112 @@ class DomParser {
         let children;
 
         if (attributes.parentVariable) {
-            // variables = parentDetected.variables;
             children = Array.from(node.childNodes).map(x => x.cloneNode(true))
             attributes.parentVariable.template = children
         } else {
-            children = node.childNodes
+            children = Array.from(node.childNodes)
         }
         this.#mergeVariables(variables, attributes.variables)
 
         let n = 1;
+        let indexOffset = 0;
         children.forEach((child, index) => {
             let parsed = [];
 
             if (child.nodeType === Node.TEXT_NODE) {
                 parsed = this.#textParser.parse(child.textContent)
-                parsed.variables.forEach(variable => {
-                    this.#addNodeToVariable(variables, variable,
-                        {
-                            node: child,
-                            type: 'text',
-                            structure: parsed.structure,
-                            path: path,
-                            index: index
-                        })
-                })
+                const hasRaw = parsed.structure.some(s => s.type === 'raw');
+
+                if (hasRaw) {
+                    // Split the text node into multiple nodes
+                    const segments = [];
+                    let current = { type: 'text', structure: [], variables: new Set() };
+
+                    parsed.structure.forEach(s => {
+                        if (s.type === 'raw') {
+                            if (current.structure.length > 0) {
+                                segments.push(current);
+                                current = { type: 'text', structure: [], variables: new Set() };
+                            }
+                            segments.push({ type: 'raw', name: s.name });
+                        } else {
+                            current.structure.push(s);
+                            if (s.name) current.variables.add(s.name);
+                            if (s.var1) current.variables.add(s.var1);
+                            if (s.var2) current.variables.add(s.var2);
+                            if (s.var3) current.variables.add(s.var3);
+                        }
+                    });
+                    if (current.structure.length > 0) segments.push(current);
+
+                    const parent = child.parentNode || node;
+                    const newNodes = [];
+                    segments.forEach((segment) => {
+                        if (segment.type === 'raw') {
+                            const placeholder = document.createElement('span');
+                            placeholder.style.display = 'contents';
+                            newNodes.push(placeholder);
+                        } else {
+                            const newTextNode = document.createTextNode("");
+                            newTextNode.textContent = segment.structure.reduce((str, s) => {
+                                return str + (s.type === 'txt' ? s.value : "");
+                            }, "");
+                            newNodes.push(newTextNode);
+                        }
+                    });
+
+                    // Replace the old text node with new nodes in the actual DOM or template
+                    newNodes.forEach((newNode) => {
+                        parent.insertBefore(newNode, child);
+                    });
+                    parent.removeChild(child);
+
+                    // Now bind variables to the actual nodes in the DOM
+                    segments.forEach((segment, sIndex) => {
+                        const actualNode = newNodes[sIndex];
+                        const actualIndex = Array.from(parent.childNodes).indexOf(actualNode);
+                        
+                        if (segment.type === 'raw') {
+                            this.#addNodeToVariable(variables, segment.name, {
+                                node: actualNode,
+                                type: 'raw',
+                                name: segment.name,
+                                path: path,
+                                index: actualIndex
+                            });
+                            n++;
+                        } else {
+                            segment.variables.forEach(variable => {
+                                this.#addNodeToVariable(variables, variable, {
+                                    node: actualNode,
+                                    type: 'text',
+                                    structure: segment.structure,
+                                    path: path,
+                                    index: actualIndex
+                                });
+                            });
+                        }
+                    });
+
+                    if (attributes.parentVariable) {
+                        // Update the template array for foreach
+                        children.splice(index + indexOffset, 1, ...newNodes);
+                    }
+                    indexOffset += newNodes.length - 1;
+                } else {
+                    parsed.variables.forEach(variable => {
+                        this.#addNodeToVariable(variables, variable,
+                            {
+                                node: child,
+                                type: 'text',
+                                structure: parsed.structure,
+                                path: path,
+                                index: index + indexOffset
+                            })
+                    })
+                }
             } else if (child.nodeType === Node.ELEMENT_NODE) {
-                const childVariables = this.#parseNode(child, attributes ? "" : `${path}${path === "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
+                const childVariables = this.#parseNode(child, attributes.parentVariable ? "" : `${path}${path === "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
                 if (attributes.parentVariable) {
                     this.#mergeVariables(attributes.parentVariable.variables, childVariables)
                     this.#addNodeToVariable(variables, attributes.parentVariable.name, attributes.parentVariable)

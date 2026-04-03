@@ -88,7 +88,7 @@ class UpdateHandler {
             let manipulatedNode = undefined;
             if (this.#node) {
                 const baseNode = manipulator.variables.path === "" ? this.#node : this.#node.querySelector(manipulator.variables.path);
-                if (manipulator.variables.type === "text") {
+                if (manipulator.variables.type === "text" || manipulator.variables.type === "raw") {
                     manipulatedNode = baseNode.childNodes[manipulator.variables.index];
                 } else if (manipulator.variables.type === "attribute") {
                     manipulatedNode = baseNode.getAttributeNode(manipulator.variables.name);
