@@ -6,6 +6,8 @@
  * the DOM.
  */
 
+import { evaluateAST } from "./expressions.js";
+
 /**
  * A utility function for rendering a text string when given a the parsed tree genereted by the text parser.
  *
@@ -14,18 +16,15 @@
  */
 function renderText(structure, data) {
     return structure.reduce((string, segment) => {
+        if (segment.ast) {
+            const val = evaluateAST(segment.ast, data);
+            return string + (val !== undefined ? val : "");
+        }
         switch (segment.type) {
-            case 'var':
-                return string + data[segment.name];
             case 'txt':
                 return string + segment.value;
-            case 'cond':
-                return string + (data[segment.var1] ? data[segment.var1] : data[segment.var2]);
-            case 'condstr':
-                return string + (data[segment.var1] ? segment.var2 : "");
-            case 'condstrelse':
-                return string + (data[segment.var1] ? segment.var2 : segment.var3);
         }
+        return string;
     }, "");
 }
 
@@ -78,7 +77,7 @@ class RawHTMLManipulator {
     }
 
     update(data, node) {
-        const value = data[this.#entry.name];
+        const value = this.#entry.ast ? evaluateAST(this.#entry.ast, data) : data[this.#entry.name];
         (node || this.#entry.node).innerHTML = value !== undefined ? value : "";
     }
 }

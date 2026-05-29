@@ -1,102 +1,98 @@
+import { parseExpressionString, extractDependencies } from "./expressions.js";
+
+/**
+ * TextParser is responsible for parsing template strings (e.g. content inside text nodes
+ * or attributes) and identifying segments containing double curly braces {{ ... }}
+ * or triple curly braces {{{ ... }}}. It parses them into expression AST nodes and
+ * extracts variable dependencies.
+ */
 class TextParser {
 
-    #regexes
-
-    constructor() {
-        this.#regexes = {
-            rawVariable: new RegExp(`{{{\\s*([a-z][a-z0-9_]*)\\s*}}}`, 'i'),
-            variable: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*}}`, 'i'),
-            condstr: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*"([^"]*)"\\s*}}`, 'i'),
-            condstrelse: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*"([^"]*)"\\s*:\\s*"([^"]*)"\\s*}}`, 'i'),
-            cond: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*([^"]*)\\s*}}`, 'i'),
-            text: new RegExp(`{{`, 'i')
-        }
-    }
+    constructor() {}
 
     /**
-     * Push the leading text from a variable match unto the parsed list
+     * Parses a string containing template bindings into a list of structure segments
+     * (plain text, raw HTML expressions, or standard text expressions) and gathers
+     * the variable dependencies.
      *
-     * @param {string} text
-     * @param {*} match
-     * @param {Array} parsed
+     * @param {string} text The raw text string to parse.
+     * @returns {{ variables: Set<string>, structure: Array<Object> }} An object containing
+     * the set of extracted dynamic variable names and the parsed template structure segments.
      */
-    #pushLeadingText(text, match, parsed) {
-        if (match.index > 0) {
-            parsed.push({type: 'txt', value: text.substring(0, match.index)});
-        }
-    }
-
     parse (text) {
         let values = [];
         let vars = new Set();
-        let order = ['rawVariable', 'variable', 'condstrelse', 'condstr', 'cond', 'text'];
-        let index = 0;
-        let lastIndex = undefined;
 
-        // Break the text up into specific identified chunks
         while (text.length > 0) {
-            let bestMatch = null;
-            let bestOrderType = null;
+            let nextThreeOpen = text.indexOf('{{{');
+            let nextTwoOpen = text.indexOf('{{');
 
-            if (lastIndex !== undefined && lastIndex === index) {
-                throw `Error parsing ${text}`
-            }
-            lastIndex = index;
+            // Find the closest opener
+            let openerIdx = -1;
+            let openerLen = 0;
 
-            // Find the earliest match among all regexes
-            for (let i in order) {
-                const match = this.#regexes[order[i]].exec(text)
-                if (match) {
-                    if (bestMatch === null || match.index < bestMatch.index) {
-                        bestMatch = match;
-                        bestOrderType = order[i];
-                    }
-                }
+            if (nextThreeOpen !== -1 && (nextTwoOpen === -1 || nextThreeOpen <= nextTwoOpen)) {
+                openerIdx = nextThreeOpen;
+                openerLen = 3;
+            } else if (nextTwoOpen !== -1) {
+                openerIdx = nextTwoOpen;
+                openerLen = 2;
             }
 
-            if (bestMatch) {
-                const match = bestMatch;
-                const type = bestOrderType;
-                index = match.index + match[0].length
-                switch (type) {
-                    case 'rawVariable':
-                        this.#pushLeadingText(text, match, values)
-                        values.push({type: 'raw', name: match[1]})
-                        vars.add(match[1])
-                        text = text.substr(index, text.length - index)
-                        break;
-                    case 'variable':
-                        this.#pushLeadingText(text, match, values)
-                        values.push({type: 'var', name: match[1]})
-                        vars.add(match[1])
-                        text = text.substr(index, text.length - index)
-                        break;
-                    case 'condstr':
-                    case 'cond':
-                        this.#pushLeadingText(text, match, values);
-                        values.push({type: type, var1: match[1].trim(), var2: match[2].trim()})
-                        vars.add(match[1].trim())
-                        text = text.substr(index, text.length - index)
-                        if (type === 'cond') vars.add(match[2].trim())
-                        break;
-                    case 'condstrelse':
-                        this.#pushLeadingText(text, match, values)
-                        values.push({type: 'condstrelse', var1: match[1], var2: match[2], var3: match[3]})
-                        vars.add(match[1])
-                        text = text.substr(index, text.length - index)
-                        break;
-                    case 'text':
-                        this.#pushLeadingText(text, match, values)
-                        text = text.substr(match.index + 2, text.length - (match.index + 2))
-                        break
-                }
+            if (openerIdx === -1) {
+                // No more expressions
+                values.push({ type: 'txt', value: text });
+                break;
+            }
+
+            // Push leading text
+            if (openerIdx > 0) {
+                values.push({ type: 'txt', value: text.substring(0, openerIdx) });
+            }
+
+            let closerStr = openerLen === 3 ? '}}}' : '}}';
+            let closerIdx = text.indexOf(closerStr, openerIdx + openerLen);
+
+            if (closerIdx === -1) {
+                // Unmatched opening bracket - treat it as plain text and continue
+                values.push({ type: 'txt', value: text.substring(openerIdx, openerIdx + openerLen) });
+                text = text.substring(openerIdx + openerLen);
             } else {
-                // If none of the regexes match return the remaining part of the string as is
-                values.push({type: 'txt', value: text})
-                break
+                let inner = text.substring(openerIdx + openerLen, closerIdx).trim();
+                try {
+                    let ast = parseExpressionString(inner);
+                    let deps = extractDependencies(ast);
+
+                    deps.forEach(v => vars.add(v));
+
+                    if (openerLen === 3) {
+                        // Raw variable
+                        const rawNode = { type: 'raw', name: inner };
+                        Object.defineProperty(rawNode, 'ast', {
+                            value: ast,
+                            enumerable: false,
+                            writable: true,
+                            configurable: true
+                        });
+                        values.push(rawNode);
+                    } else {
+                        // Standard expression
+                        const exprNode = { type: 'expression' };
+                        Object.defineProperty(exprNode, 'ast', {
+                            value: ast,
+                            enumerable: false,
+                            writable: true,
+                            configurable: true
+                        });
+                        values.push(exprNode);
+                    }
+                } catch (e) {
+                    throw new Error(`Error parsing "${inner}": ${e.message}`);
+                }
+                text = text.substring(closerIdx + openerLen);
             }
         }
-        return {variables: vars, structure: values}
+        return { variables: vars, structure: values };
     }
 }
 
@@ -150,9 +146,9 @@ class DomParser {
      * Parse a given node for variables in its attributes that can be rendered later.
      * This method returns a parent object in cases where the attribute dictates a foreach loop.
      *
-     * @param {Node} node
-     * @param {Map} variables
-     * @param {string} path
+     * @param {Node} node The DOM element node to parse.
+     * @param {string} path The current DOM selector path.
+     * @returns {Object} An object containing parsed attribute variables and any parent loop variable structure.
      */
     #parseAttributes(node, path) {
 
@@ -226,8 +222,9 @@ class DomParser {
      * Parse an element node and its children to find any text nodes or attributes that contain variables to which
      * bindings can be created.
      *
-     * @param {Node} node
-     * @param {Map} variables
+     * @param {Node} node The DOM element node to parse.
+     * @param {string} path The current DOM selector path.
+     * @returns {Map<string, Array<Object>>} A map of variable names to their bound DOM node details.
      */
     #parseNode(node, path) {
         const variables = new Map()
@@ -284,6 +281,18 @@ class DomParser {
 
     /**
      * Handle the splitting of a text node when it contains raw variable segments.
+     *
+     * @param {Text} child The raw text node containing unescaped HTML template bindings.
+     * @param {Node} node The parent element node.
+     * @param {Object} parsed The parsed structure and variables from TextParser.
+     * @param {Map} variables The map tracking accumulated dynamic variable bindings.
+     * @param {string} path The current DOM selector path.
+     * @param {Object} attributes Parsed attributes and loop information of the parent node.
+     * @param {Array<Node>} children The child DOM nodes array.
+     * @param {number} index Index of the current child.
+     * @param {number} indexOffset Accumulated offset of DOM children modifications.
+     * @param {number} n The child index iterator.
+     * @returns {{ indexOffset: number, n: number }} Updated indexOffset and n values.
      */
     #handleRawSegments(child, node, parsed, variables, path, attributes, children, index, indexOffset, n) {
         // Split the text node into multiple nodes
@@ -299,6 +308,10 @@ class DomParser {
                 segments.push({ type: 'raw', name: s.name });
             } else {
                 current.structure.push(s);
+                if (s.ast) {
+                    const deps = extractDependencies(s.ast);
+                    deps.forEach(v => current.variables.add(v));
+                }
                 if (s.name) current.variables.add(s.name);
                 if (s.var1) current.variables.add(s.var1);
                 if (s.var2) current.variables.add(s.var2);
