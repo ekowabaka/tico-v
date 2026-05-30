@@ -12,7 +12,7 @@ beforeEach(() => {
         <body>
             <div id="wrapper">
                 <div tv-foreach="items" id="list">
-                    <p tv-value-id="{{id}}">{{text}}</p>
+                    <p $id="{{id}}">{{text}}</p>
                 </div>
             </div>
         </body>

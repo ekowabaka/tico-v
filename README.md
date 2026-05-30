@@ -30,7 +30,7 @@ Templates for tiCo-v are written directly into the HTML markup of your the page.
         <span id='firstname'>{{firstname}}</span>
         <span id='lastname'>{{lastname}}</span>
     </div>
-    <img tv-value-src='{{avater_img?"default-avatar.png"}}' />
+    <img $src='{{avater_img?"default-avatar.png"}}' />
     <ul tv-true="updates">
         <li tv-foreach="updates">
             <span>{{time}}</span>
@@ -53,7 +53,7 @@ Conditional substitution can be made with the "`?`" operator, which acts as some
 Conditional substitutions can also involve literal text such as ``{{truth ? "when true" : "when false"}}``. In this case, the text ``when true`` is substituted if the variable ``truth`` is truthy and ``when false`` is displayed when it's false. For literal substitutions, the second literal to be displayed on a false value can be omitted and it's automatically replaced with an empty string.
 
 ### Special tv attributes
-Prefixing any attribute with `tv-value-` causes that attribute to be later added with its value parsed for text substitutions. For example adding the attribute `tv-value-src='{{avater_img?"default-avatar.png"}}'` to an `img` tag will cause tiCo-v to add an `src` attribute whose value is based on the evaluation of the substitution `{{avater_img?"default-avatar.png"}}`.
+Prefixing any attribute with `$` causes that attribute to be later added with its value parsed for text substitutions. For example adding the attribute `$src='{{avater_img?"default-avatar.png"}}'` to an `img` tag will cause tiCo-v to add an `src` attribute whose value is based on the evaluation of the substitution `{{avater_img?"default-avatar.png"}}`.
 
 You can hide and show DOM nodes using the `tv-true` and `tv-not-true` attributes. A DOM node with the `tv-true` attribute will be visible if the variable represented by the value of the attribute is truthy. Likewise, a DOM node with `tv-not-true` will be visible only when the value of the variable is false.
 

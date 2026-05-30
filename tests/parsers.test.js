@@ -38,7 +38,7 @@ beforeAll(() => {
 
 test("parse variables", () => {
     document.body.innerHTML = layout.replace('%s',
-        `<div tv-value-title="This is {{another}}" tv-value-class="{{something}}">{{ another  }}</div>`
+        `<div $title="This is {{another}}" $class="{{something}}">{{ another  }}</div>`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toBe(2)
@@ -85,7 +85,7 @@ test("parse raw variables", () => {
 
 test("parse conditions", () => {
     document.body.innerHTML = layout.replace(
-        '%s', `<div tv-value-title="This is {{ifthis?that}}">`
+        '%s', `<div $title="This is {{ifthis?that}}">`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toBe(2)
@@ -110,7 +110,7 @@ test("parse conditions", () => {
 
 test("parse spaced conditions", () => {
     document.body.innerHTML = layout.replace(
-        '%s', `<div tv-value-title="This is {{ ifthis ?  that  }}">`
+        '%s', `<div $title="This is {{ ifthis ?  that  }}">`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toBe(2)
@@ -120,7 +120,7 @@ test("parse spaced conditions", () => {
 
 test("parse condition string", () => {
     document.body.innerHTML = layout.replace(
-        '%s', `<div tv-value-title='This is {{ ifthis ?  "some string"  }}'>`
+        '%s', `<div $title='This is {{ ifthis ?  "some string"  }}'>`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toEqual(1)
@@ -136,7 +136,7 @@ test("parse condition string", () => {
 
 test("parse condition string else", () => {
     document.body.innerHTML = layout.replace(
-        '%s', `<div tv-value-title='This is {{ ifthis ?  "some string" : "other string"  }}'>`
+        '%s', `<div $title='This is {{ ifthis ?  "some string" : "other string"  }}'>`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toEqual(1)

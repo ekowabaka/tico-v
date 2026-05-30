@@ -108,7 +108,7 @@ class DomParser {
     constructor() {
         this.#textParser = new TextParser()
         this.#attributeRegexes = [
-            "tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-set)-([a-z0-9_\-]+)", "(tv-).*"
+            "tv-foreach", "tv-true", "tv-not-true", "^\\$([a-z0-9_\\-]+)", "(tv-set)-([a-z0-9_\\-]+)", "(tv-).*"
         ].map(regex => new RegExp(regex, 'i'))
     }
 
@@ -162,9 +162,9 @@ class DomParser {
                 const match = regex.exec(attribute.name)
                 if (!match) continue
 
-                if (match[1] === 'tv-value') {
+                if (match[0].startsWith('$')) {
                     // Extract and set attribute node values on the fly.
-                    const attributeNode = document.createAttribute(match[2])
+                    const attributeNode = document.createAttribute(match[1])
                     const parsed = this.#textParser.parse(attribute.value)
                     node.setAttributeNode(attributeNode)
 
@@ -173,7 +173,7 @@ class DomParser {
                             {
                                 node: attributeNode,
                                 type: 'attribute',
-                                name: match[2],
+                                name: match[1],
                                 structure: parsed.structure,
                                 path: path
                             }

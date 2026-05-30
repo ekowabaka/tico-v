@@ -46,7 +46,7 @@ test("binds attributes to a dom element", () => {
     <html>  
         <head><title>A test page</title></head>
         <body>
-            <div id="wrapper"><div tv-value-attrib="{{value}}">Should have attribute values</div></div>
+            <div id="wrapper"><div $attrib="{{value}}">Should have attribute values</div></div>
         </body>
     </html>`
 
@@ -94,7 +94,7 @@ test("binding over foreach items", () => {
     document.body.innerHTML = `<html>
         <head><title>A test page</title></head>
         <body>
-            <ul tv-value-class="{{aclass}}" tv-foreach="items" id="wrapper">
+            <ul $class="{{aclass}}" tv-foreach="items" id="wrapper">
                 <li>{{description}}</li>
             </ul>
         </body>

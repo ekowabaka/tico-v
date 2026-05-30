@@ -31,8 +31,8 @@ test("add array and value to foreach element", () => {
         <head><title>A test page</title></head>
         <body>
             <div id="wrapper">
-                <div tv-foreach="items" id="list" tv-value-class="{{aclass}}">
-                    <p tv-value-id="{{id}}">{{text}}</p>
+                <div tv-foreach="items" id="list" $class="{{aclass}}">
+                    <p $id="{{id}}">{{text}}</p>
                 </div>
             </div>
         </body>
@@ -55,8 +55,8 @@ test("nested array values", () => {
         <head><title>A test page</title></head>
         <body>
             <div id="wrapper">
-                <div tv-foreach="items" id="list" tv-value-class="{{aclass}}">
-                    <ul tv-value-id="{{id}}" tv-foreach="subitems">
+                <div tv-foreach="items" id="list" $class="{{aclass}}">
+                    <ul $id="{{id}}" tv-foreach="subitems">
                         <li>{{subitem}}</li>
                     </ul>
                 </div>

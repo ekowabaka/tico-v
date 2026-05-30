@@ -202,7 +202,7 @@ class Parser {
         if (token && token.type === 'OPERATOR' && token.value === '?') {
             this.next(); // Consume '?'
             const consequent = this.parseExpression();
-            let alternate = null;
+            let alternate;
             const nextToken = this.peek();
             if (nextToken && nextToken.type === 'OPERATOR' && nextToken.value === ':') {
                 this.next(); // Consume ':'
@@ -722,10 +722,25 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _expressions_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./expressions.js */ "./src/expressions.js");
 
 
+/**
+ * TextParser is responsible for parsing template strings (e.g. content inside text nodes
+ * or attributes) and identifying segments containing double curly braces {{ ... }}
+ * or triple curly braces {{{ ... }}}. It parses them into expression AST nodes and
+ * extracts variable dependencies.
+ */
 class TextParser {
 
     constructor() {}
 
+    /**
+     * Parses a string containing template bindings into a list of structure segments
+     * (plain text, raw HTML expressions, or standard text expressions) and gathers
+     * the variable dependencies.
+     *
+     * @param {string} text The raw text string to parse.
+     * @returns {{ variables: Set<string>, structure: Array<Object> }} An object containing
+     * the set of extracted dynamic variable names and the parsed template structure segments.
+     */
     parse (text) {
         let values = [];
         let vars = new Set();
@@ -815,7 +830,7 @@ class DomParser {
     constructor() {
         this.#textParser = new TextParser()
         this.#attributeRegexes = [
-            "tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-set)-([a-z0-9_\-]+)", "(tv-).*"
+            "tv-foreach", "tv-true", "tv-not-true", "^\\$([a-z0-9_\\-]+)", "(tv-set)-([a-z0-9_\\-]+)", "(tv-).*"
         ].map(regex => new RegExp(regex, 'i'))
     }
 
@@ -853,9 +868,9 @@ class DomParser {
      * Parse a given node for variables in its attributes that can be rendered later.
      * This method returns a parent object in cases where the attribute dictates a foreach loop.
      *
-     * @param {Node} node
-     * @param {Map} variables
-     * @param {string} path
+     * @param {Node} node The DOM element node to parse.
+     * @param {string} path The current DOM selector path.
+     * @returns {Object} An object containing parsed attribute variables and any parent loop variable structure.
      */
     #parseAttributes(node, path) {
 
@@ -869,9 +884,9 @@ class DomParser {
                 const match = regex.exec(attribute.name)
                 if (!match) continue
 
-                if (match[1] === 'tv-value') {
+                if (match[0].startsWith('$')) {
                     // Extract and set attribute node values on the fly.
-                    const attributeNode = document.createAttribute(match[2])
+                    const attributeNode = document.createAttribute(match[1])
                     const parsed = this.#textParser.parse(attribute.value)
                     node.setAttributeNode(attributeNode)
 
@@ -880,7 +895,7 @@ class DomParser {
                             {
                                 node: attributeNode,
                                 type: 'attribute',
-                                name: match[2],
+                                name: match[1],
                                 structure: parsed.structure,
                                 path: path
                             }
@@ -929,8 +944,9 @@ class DomParser {
      * Parse an element node and its children to find any text nodes or attributes that contain variables to which
      * bindings can be created.
      *
-     * @param {Node} node
-     * @param {Map} variables
+     * @param {Node} node The DOM element node to parse.
+     * @param {string} path The current DOM selector path.
+     * @returns {Map<string, Array<Object>>} A map of variable names to their bound DOM node details.
      */
     #parseNode(node, path) {
         const variables = new Map()
@@ -987,6 +1003,18 @@ class DomParser {
 
     /**
      * Handle the splitting of a text node when it contains raw variable segments.
+     *
+     * @param {Text} child The raw text node containing unescaped HTML template bindings.
+     * @param {Node} node The parent element node.
+     * @param {Object} parsed The parsed structure and variables from TextParser.
+     * @param {Map} variables The map tracking accumulated dynamic variable bindings.
+     * @param {string} path The current DOM selector path.
+     * @param {Object} attributes Parsed attributes and loop information of the parent node.
+     * @param {Array<Node>} children The child DOM nodes array.
+     * @param {number} index Index of the current child.
+     * @param {number} indexOffset Accumulated offset of DOM children modifications.
+     * @param {number} n The child index iterator.
+     * @returns {{ indexOffset: number, n: number }} Updated indexOffset and n values.
      */
     #handleRawSegments(child, node, parsed, variables, path, attributes, children, index, indexOffset, n) {
         // Split the text node into multiple nodes
