@@ -154,3 +154,28 @@ test("set to add boolean attributes to nodes", () => {
     view.data.show = false
     expect(document.body.querySelector("#wrapper > input").hasAttribute('checked')).toEqual(false)
 })
+
+test("removes template attributes after parsing", () => {
+    document.body.innerHTML = `
+    <html>
+        <head><title>A test page</title></head>
+        <body>
+            <div id="wrapper">
+                <div $class="{{aclass}}" #tvShowIf="show" #tvForEach="items">
+                    <p>{{text}}</p>
+                </div>
+            </div>
+        </body>
+    </html>`
+    const view = bind(document.getElementById('wrapper'))
+    view.data = {
+        show: true,
+        aclass: 'my-class',
+        items: [{text: '1'}, {text: '2'}]
+    }
+
+    const div = document.body.querySelector("#wrapper > div")
+    expect(div.hasAttribute('$class')).toEqual(false)
+    expect(div.hasAttribute('#tvShowIf')).toEqual(false)
+    expect(div.hasAttribute('#tvForEach')).toEqual(false)
+})
