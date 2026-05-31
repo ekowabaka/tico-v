@@ -108,16 +108,25 @@ class SetManipulator {
 class TruthAttributeManipulator {
 
     #entry
-    #invert
 
-    constructor(entry, invert) {
+    constructor(entry) {
         this.#entry = entry
-        this.#invert = invert
     }
 
     update(data, node) {
-        const final = node || this.#entry.node
-        if ((data[this.#entry.name] && !this.#invert) || (!data[this.#entry.name] && this.#invert)) {
+        const final = node || this.#entry.node;
+        let isTrue;
+        if (this.#entry.ast) {
+            try {
+                isTrue = !!evaluateAST(this.#entry.ast, data);
+            } catch (e) {
+                isTrue = false;
+            }
+        } else {
+            isTrue = !!data[this.#entry.name];
+        }
+
+        if (isTrue) {
             if (final.hasAttribute('hidden')) {
                 final.removeAttribute('hidden');
             }
@@ -205,10 +214,7 @@ class DomManipulators {
                         manipulator = new RawHTMLManipulator(entry)
                         break;
                     case 'truth':
-                        manipulator = new TruthAttributeManipulator(entry, false)
-                        break;
-                    case 'not-truth':
-                        manipulator = new TruthAttributeManipulator(entry, true)
+                        manipulator = new TruthAttributeManipulator(entry)
                         break;
                     case 'foreach':
                         manipulator = new ForeachManipulator(entry, bindingDetails)

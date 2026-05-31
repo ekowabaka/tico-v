@@ -31,14 +31,14 @@ Templates for tiCo-v are written directly into the HTML markup of your the page.
         <span id='lastname'>{{lastname}}</span>
     </div>
     <img $src='{{avater_img?"default-avatar.png"}}' />
-    <ul tv-true="updates">
-        <li tv-foreach="updates">
+    <ul #tvShowIf="updates">
+        <li #tvForEach="updates">
             <span>{{time}}</span>
             <span>{{update}}</span>
             <span>This update is {{verified?"":"not"}} verified<span>
         </li>
     </ul>
-    <div tv-not-true="updates">There are currently no updates</div>
+    <div #tvShowIf="!updates">There are currently no updates</div>
 </div>
 ````
 
@@ -55,9 +55,9 @@ Conditional substitutions can also involve literal text such as ``{{truth ? "whe
 ### Special tv attributes
 Prefixing any attribute with `$` causes that attribute to be later added with its value parsed for text substitutions. For example adding the attribute `$src='{{avater_img?"default-avatar.png"}}'` to an `img` tag will cause tiCo-v to add an `src` attribute whose value is based on the evaluation of the substitution `{{avater_img?"default-avatar.png"}}`.
 
-You can hide and show DOM nodes using the `tv-true` and `tv-not-true` attributes. A DOM node with the `tv-true` attribute will be visible if the variable represented by the value of the attribute is truthy. Likewise, a DOM node with `tv-not-true` will be visible only when the value of the variable is false.
+You can hide and show DOM nodes using the `#tvShowIf` attribute. A DOM node with the `#tvShowIf` attribute will be visible if the boolean expression represented by the value of the attribute is truthy. You can use standard JavaScript boolean expressions here, like `!updates` or `status === "active"`.
 
-The `tv-foreach` attribute helps with repeating nodes.
+The `#tvForEach` attribute helps with repeating nodes.
 
 ## Binding Variables
 To bind an object to a template such as the one above, you can use:

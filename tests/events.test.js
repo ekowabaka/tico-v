@@ -9,7 +9,7 @@ test("triggering events after items are added", () => {
         <head><title>A test page</title></head>
         <body>
             <div id="wrapper">
-                <div tv-foreach="items" id="list" $class="{{aclass}}">
+                <div #tvForEach="items" id="list" $class="{{aclass}}">
                     <p $id="{{id}}">{{text}}</p>
                 </div>
             </div>

@@ -64,7 +64,7 @@ test("shows or hides dom nodes", () => {
     document.body.innerHTML = `<html>  
         <head><title>A test page</title></head>
         <body>
-            <div id="wrapper"><div tv-true="shown">Should have attribute values</div></div>
+            <div id="wrapper"><div #tvShowIf="shown">Should have attribute values</div></div>
         </body>
     </html>`
 
@@ -75,11 +75,11 @@ test("shows or hides dom nodes", () => {
     expect(document.body.querySelector("#wrapper > div").hidden).toEqual(false)
 })
 
-test("inversely shows or hides dom nodes", () => {
+test("evaluates boolean expressions to show or hide dom nodes", () => {
     document.body.innerHTML = `<html>  
         <head><title>A test page</title></head>
         <body>
-            <div id="wrapper"><div tv-not-true="inverseShown">Should have attribute values</div></div>
+            <div id="wrapper"><div #tvShowIf="!inverseShown">Should have attribute values</div></div>
         </body>
     </html>`
 
@@ -94,7 +94,7 @@ test("binding over foreach items", () => {
     document.body.innerHTML = `<html>
         <head><title>A test page</title></head>
         <body>
-            <ul $class="{{aclass}}" tv-foreach="items" id="wrapper">
+            <ul $class="{{aclass}}" #tvForEach="items" id="wrapper">
                 <li>{{description}}</li>
             </ul>
         </body>

@@ -108,7 +108,7 @@ class DomParser {
     constructor() {
         this.#textParser = new TextParser()
         this.#attributeRegexes = [
-            "tv-foreach", "tv-true", "tv-not-true", "^\\$([a-z0-9_\\-]+)", "(tv-set)-([a-z0-9_\\-]+)", "(tv-).*"
+            "#tvforeach", "#tvshowif", "^\\$([a-z0-9_\\-]+)", "(tv-set)-([a-z0-9_\\-]+)", "(tv-).*"
         ].map(regex => new RegExp(regex, 'i'))
     }
 
@@ -157,7 +157,8 @@ class DomParser {
             variables: new Map()
         }
 
-        for (const attribute of node.attributes) {
+        const attributesToRemove = [];
+        for (const attribute of Array.from(node.attributes)) {
             for (const regex of this.#attributeRegexes) {
                 const match = regex.exec(attribute.name)
                 if (!match) continue
@@ -179,6 +180,7 @@ class DomParser {
                             }
                         )
                     })
+                    attributesToRemove.push(attribute.name);
                 } else if (match[1] === 'tv-set') {
                     // Extract and set the attribute node on the fly.
                     this.#addNodeToVariable(response.variables, attribute.value,
@@ -189,17 +191,22 @@ class DomParser {
                             path: path,
                             attribute: match[2],
                         })
-                } else if (match[0] === 'tv-true') {
-                    // Hide and display nodes according to the truthiness of variables.
-                    this.#addNodeToVariable(response.variables, attribute.value,
-                        {node: node, type: 'truth', name: attribute.value, display: node.style.display, path: path}
-                    )
-                } else if (match[0] === 'tv-not-true') {
-                    // Hide and display nodes according to the truthiness of variables.
-                    this.#addNodeToVariable(response.variables, attribute.value,
-                        {node: node, type: 'not-truth', name: attribute.value, display: node.style.display, path: path}
-                    )
-                } else if (match[0] === 'tv-foreach') {
+                } else if (match[0] === '#tvshowif') {
+                    try {
+                        const ast = parseExpressionString(attribute.value);
+                        const deps = extractDependencies(ast);
+                        if (deps.size > 0) {
+                            deps.forEach(variable => {
+                                this.#addNodeToVariable(response.variables, variable,
+                                    {node: node, type: 'truth', name: attribute.value, ast: ast, display: node.style.display, path: path}
+                                )
+                            });
+                        }
+                    } catch(e) {
+                        console.error('Invalid expression in #tvShowIf:', attribute.value, e);
+                    }
+                    attributesToRemove.push(attribute.name);
+                } else if (match[0] === '#tvforeach') {
                     response.parentVariable = {
                         template: node.childNodes,
                         childElementCount: node.childElementCount,
@@ -210,10 +217,13 @@ class DomParser {
                         path: path,
                         id: null
                     }
+                    attributesToRemove.push(attribute.name);
                 }
                 break;
             }
         }
+
+        attributesToRemove.forEach(name => node.removeAttribute(name));
 
         return response
     }
