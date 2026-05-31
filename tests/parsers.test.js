@@ -2,8 +2,7 @@
  * @jest-environment jsdom
  */
 
-import {DomParser} from "../src/parsers.js";
-
+import { DomParser } from "../src/parsers.js";
 
 let parser
 const layout = `<!DOCTYPE html>
@@ -39,7 +38,7 @@ beforeAll(() => {
 
 test("parse variables", () => {
     document.body.innerHTML = layout.replace('%s',
-        `<div tv-value-title="This is {{another}}" tv-value-class="{{something}}">{{ another  }}</div>`
+        `<div $title="This is {{another}}" $class="{{something}}">{{ another  }}</div>`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toBe(2)
@@ -51,7 +50,8 @@ test("parse variables", () => {
     const something = somethings[0]
     expect(something).toMatchObject(variable)
     expect(something).toMatchObject(attribute)
-    expect(something.structure).toEqual([{ type: 'var', name: 'something' }])
+    expect(something.structure).toEqual([{ type: 'expression' }])
+    expect(something.structure[0].ast).toBeDefined()
 
     const another = variables.get('another')
     expect(another).toHaveLength(2)
@@ -60,8 +60,9 @@ test("parse variables", () => {
     expect(another[1]).toMatchObject(text)
     expect(another[0].structure).toEqual([
         { type: 'txt', value: 'This is ' },
-        { type: 'var', name: 'another' }
+        { type: 'expression' }
     ])
+    expect(another[0].structure[1].ast).toBeDefined()
 })
 
 test("parse raw variables", () => {
@@ -79,12 +80,12 @@ test("parse raw variables", () => {
     
     const escaped = variables.get('escaped_var')[0]
     expect(escaped.type).toEqual('text')
-    expect(escaped.structure).toContainEqual({ type: 'var', name: 'escaped_var' })
+    expect(escaped.structure).toContainEqual(expect.objectContaining({ type: 'expression' }))
 })
 
 test("parse conditions", () => {
     document.body.innerHTML = layout.replace(
-        '%s', `<div tv-value-title="This is {{ifthis?that}}">`
+        '%s', `<div $title="This is {{ifthis?that}}">`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toBe(2)
@@ -92,24 +93,24 @@ test("parse conditions", () => {
     expect(variables.has('that')).toEqual(true)
 
     const ifthis = variables.get('ifthis')
-    // expect(ifthis[0].path).toEqual('DIV:nth-child(1)')
     expect(ifthis[0]).toMatchObject(variable)
     expect(ifthis[0]).toMatchObject(attribute)
     expect(ifthis[0].structure).toEqual([
         { type: 'txt', value: 'This is ' },
-        { type: 'cond', var1: 'ifthis', var2: 'that' }
+        { type: 'expression' }
     ])
+    expect(ifthis[0].structure[1].ast).toBeDefined()
 
     const that = variables.get('that')
     expect(that[0].structure).toEqual([
         { type: 'txt', value: 'This is ' },
-        { type: 'cond', var1: 'ifthis', var2: 'that' }
+        { type: 'expression' }
     ])
 })
 
 test("parse spaced conditions", () => {
     document.body.innerHTML = layout.replace(
-        '%s', `<div tv-value-title="This is {{ ifthis ?  that  }}">`
+        '%s', `<div $title="This is {{ ifthis ?  that  }}">`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toBe(2)
@@ -119,7 +120,7 @@ test("parse spaced conditions", () => {
 
 test("parse condition string", () => {
     document.body.innerHTML = layout.replace(
-        '%s', `<div tv-value-title='This is {{ ifthis ?  "some string"  }}'>`
+        '%s', `<div $title='This is {{ ifthis ?  "some string"  }}'>`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toEqual(1)
@@ -128,13 +129,14 @@ test("parse condition string", () => {
     expect(ifthis[0]).toMatchObject(attribute)
     expect(ifthis[0].structure).toEqual([
         { type: 'txt', value: 'This is ' },
-        { type: 'condstr', var1: 'ifthis', var2: 'some string' }
+        { type: 'expression' }
     ])
+    expect(ifthis[0].structure[1].ast).toBeDefined()
 })
 
 test("parse condition string else", () => {
     document.body.innerHTML = layout.replace(
-        '%s', `<div tv-value-title='This is {{ ifthis ?  "some string" : "other string"  }}'>`
+        '%s', `<div $title='This is {{ ifthis ?  "some string" : "other string"  }}'>`
     )
     const variables = parser.parse(document.body.querySelector('#wrapper'))
     expect(variables.size).toEqual(1)
@@ -143,12 +145,7 @@ test("parse condition string else", () => {
     expect(ifthis[0]).toMatchObject(attribute)
     expect(ifthis[0].structure).toEqual([
         { type: 'txt', value: 'This is ' },
-        {
-            type: 'condstrelse',
-            var1: 'ifthis',
-            var2: 'some string',
-            var3: 'other string'
-        }
+        { type: 'expression' }
     ])
+    expect(ifthis[0].structure[1].ast).toBeDefined()
 })
-

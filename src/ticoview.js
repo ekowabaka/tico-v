@@ -43,6 +43,15 @@ class View {
     }
 }
 
+export const helpers = new Map();
+
+export function registerHelper(name, fn) {
+    if (typeof fn !== 'function') {
+        throw new Error(`Register error: helper must be a function.`);
+    }
+    helpers.set(name, fn);
+}
+
 /**
  * Bind a view to a mapping of its internal variables.
  */
@@ -57,3 +66,4 @@ export function bind(template) {
         throw new Error("Could not find template node")
     }
 }
+

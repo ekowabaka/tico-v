@@ -12,16 +12,467 @@ return /******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./src/manipulators.js":
+/***/ "./src/expressions.js"
+/*!****************************!*\
+  !*** ./src/expressions.js ***!
+  \****************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Parser: () => (/* binding */ Parser),
+/* harmony export */   Tokenizer: () => (/* binding */ Tokenizer),
+/* harmony export */   evaluateAST: () => (/* binding */ evaluateAST),
+/* harmony export */   extractDependencies: () => (/* binding */ extractDependencies),
+/* harmony export */   parseExpressionString: () => (/* binding */ parseExpressionString)
+/* harmony export */ });
+/* harmony import */ var _ticoview_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./ticoview.js */ "./src/ticoview.js");
+
+
+// Tokenizer
+class Tokenizer {
+    constructor(str) {
+        this.str = str;
+        this.cursor = 0;
+    }
+
+    tokenize() {
+        const tokens = [];
+        while (this.cursor < this.str.length) {
+            const char = this.str[this.cursor];
+
+            if (/\s/.test(char)) {
+                this.cursor++;
+                continue;
+            }
+
+            // String literals
+            if (char === '"' || char === "'") {
+                const quote = char;
+                let value = '';
+                this.cursor++; // Skip open quote
+                while (this.cursor < this.str.length && this.str[this.cursor] !== quote) {
+                    if (this.str[this.cursor] === '\\') {
+                        this.cursor++;
+                        value += this.str[this.cursor];
+                    } else {
+                        value += this.str[this.cursor];
+                    }
+                    this.cursor++;
+                }
+                this.cursor++; // Skip close quote
+                tokens.push({ type: 'STRING', value });
+                continue;
+            }
+
+            // Numbers
+            if (/[0-9]/.test(char) || (char === '.' && /[0-9]/.test(this.str[this.cursor + 1]))) {
+                let value = '';
+                while (this.cursor < this.str.length && /[0-9.]/.test(this.str[this.cursor])) {
+                    value += this.str[this.cursor];
+                    this.cursor++;
+                }
+                tokens.push({ type: 'NUMBER', value: parseFloat(value) });
+                continue;
+            }
+
+            // Parentheses and Comma
+            if (char === '(') {
+                tokens.push({ type: 'LPAREN' });
+                this.cursor++;
+                continue;
+            }
+            if (char === ')') {
+                tokens.push({ type: 'RPAREN' });
+                this.cursor++;
+                continue;
+            }
+            if (char === ',') {
+                tokens.push({ type: 'COMMA' });
+                this.cursor++;
+                continue;
+            }
+
+            // Operators (Multi-character check first)
+            const remaining = this.str.slice(this.cursor);
+            if (remaining.startsWith('===')) {
+                tokens.push({ type: 'OPERATOR', value: '===' });
+                this.cursor += 3;
+                continue;
+            }
+            if (remaining.startsWith('!==')) {
+                tokens.push({ type: 'OPERATOR', value: '!==' });
+                this.cursor += 3;
+                continue;
+            }
+            if (remaining.startsWith('==')) {
+                tokens.push({ type: 'OPERATOR', value: '==' });
+                this.cursor += 2;
+                continue;
+            }
+            if (remaining.startsWith('!=')) {
+                tokens.push({ type: 'OPERATOR', value: '!=' });
+                this.cursor += 2;
+                continue;
+            }
+            if (remaining.startsWith('&&')) {
+                tokens.push({ type: 'OPERATOR', value: '&&' });
+                this.cursor += 2;
+                continue;
+            }
+            if (remaining.startsWith('||')) {
+                tokens.push({ type: 'OPERATOR', value: '||' });
+                this.cursor += 2;
+                continue;
+            }
+            if (remaining.startsWith('<=')) {
+                tokens.push({ type: 'OPERATOR', value: '<=' });
+                this.cursor += 2;
+                continue;
+            }
+            if (remaining.startsWith('>=')) {
+                tokens.push({ type: 'OPERATOR', value: '>=' });
+                this.cursor += 2;
+                continue;
+            }
+
+            // Single character operators
+            if ('+-*/!?<>:'.includes(char)) {
+                tokens.push({ type: 'OPERATOR', value: char });
+                this.cursor++;
+                continue;
+            }
+
+            // Identifiers (Variables, booleans, functions)
+            if (/[a-zA-Z_$]/.test(char)) {
+                let value = '';
+                while (this.cursor < this.str.length && /[a-zA-Z0-9_$]/.test(this.str[this.cursor])) {
+                    value += this.str[this.cursor];
+                    this.cursor++;
+                }
+                if (value === 'true') {
+                    tokens.push({ type: 'BOOLEAN', value: true });
+                } else if (value === 'false') {
+                    tokens.push({ type: 'BOOLEAN', value: false });
+                } else {
+                    tokens.push({ type: 'IDENTIFIER', value });
+                }
+                continue;
+            }
+
+            throw new Error(`Unexpected character: ${char} at position ${this.cursor}`);
+        }
+        return tokens;
+    }
+}
+
+// AST Parser
+class Parser {
+    constructor(tokens) {
+        this.tokens = tokens;
+        this.index = 0;
+    }
+
+    peek() {
+        return this.tokens[this.index];
+    }
+
+    next() {
+        return this.tokens[this.index++];
+    }
+
+    parse() {
+        if (!this.tokens || this.tokens.length === 0) {
+            return { type: 'Literal', value: '' };
+        }
+        const expr = this.parseExpression();
+        if (this.index < this.tokens.length) {
+            throw new Error(`Unexpected extra tokens after valid expression parsing`);
+        }
+        return expr;
+    }
+
+    parseExpression() {
+        return this.parseTernary();
+    }
+
+    parseTernary() {
+        let left = this.parseLogicalOr();
+        const token = this.peek();
+        if (token && token.type === 'OPERATOR' && token.value === '?') {
+            this.next(); // Consume '?'
+            const consequent = this.parseExpression();
+            let alternate;
+            const nextToken = this.peek();
+            if (nextToken && nextToken.type === 'OPERATOR' && nextToken.value === ':') {
+                this.next(); // Consume ':'
+                alternate = this.parseExpression();
+            } else {
+                // Shorthand ternary: cond ? expr (defaults alternate to empty string)
+                alternate = { type: 'Literal', value: '' };
+            }
+            return {
+                type: 'ConditionalExpression',
+                test: left,
+                consequent,
+                alternate
+            };
+        }
+        return left;
+    }
+
+    parseLogicalOr() {
+        let left = this.parseLogicalAnd();
+        while (true) {
+            const token = this.peek();
+            if (token && token.type === 'OPERATOR' && token.value === '||') {
+                this.next();
+                const right = this.parseLogicalAnd();
+                left = { type: 'BinaryExpression', operator: '||', left, right };
+            } else {
+                break;
+            }
+        }
+        return left;
+    }
+
+    parseLogicalAnd() {
+        let left = this.parseEquality();
+        while (true) {
+            const token = this.peek();
+            if (token && token.type === 'OPERATOR' && token.value === '&&') {
+                this.next();
+                const right = this.parseEquality();
+                left = { type: 'BinaryExpression', operator: '&&', left, right };
+            } else {
+                break;
+            }
+        }
+        return left;
+    }
+
+    parseEquality() {
+        let left = this.parseRelational();
+        while (true) {
+            const token = this.peek();
+            if (token && token.type === 'OPERATOR' && ['===', '!==', '==', '!='].includes(token.value)) {
+                this.next();
+                const right = this.parseRelational();
+                left = { type: 'BinaryExpression', operator: token.value, left, right };
+            } else {
+                break;
+            }
+        }
+        return left;
+    }
+
+    parseRelational() {
+        let left = this.parseAdditive();
+        while (true) {
+            const token = this.peek();
+            if (token && token.type === 'OPERATOR' && ['<', '>', '<=', '>='].includes(token.value)) {
+                this.next();
+                const right = this.parseAdditive();
+                left = { type: 'BinaryExpression', operator: token.value, left, right };
+            } else {
+                break;
+            }
+        }
+        return left;
+    }
+
+    parseAdditive() {
+        let left = this.parseMultiplicative();
+        while (true) {
+            const token = this.peek();
+            if (token && token.type === 'OPERATOR' && ['+', '-'].includes(token.value)) {
+                this.next();
+                const right = this.parseMultiplicative();
+                left = { type: 'BinaryExpression', operator: token.value, left, right };
+            } else {
+                break;
+            }
+        }
+        return left;
+    }
+
+    parseMultiplicative() {
+        let left = this.parseUnary();
+        while (true) {
+            const token = this.peek();
+            if (token && token.type === 'OPERATOR' && ['*', '/'].includes(token.value)) {
+                this.next();
+                const right = this.parseUnary();
+                left = { type: 'BinaryExpression', operator: token.value, left, right };
+            } else {
+                break;
+            }
+        }
+        return left;
+    }
+
+    parseUnary() {
+        const token = this.peek();
+        if (token && token.type === 'OPERATOR' && ['!', '-', '+'].includes(token.value)) {
+            this.next();
+            const argument = this.parseUnary();
+            return { type: 'UnaryExpression', operator: token.value, argument };
+        }
+        return this.parsePrimary();
+    }
+
+    parsePrimary() {
+        const token = this.next();
+        if (!token) {
+            throw new Error(`Unexpected end of input`);
+        }
+
+        if (token.type === 'STRING' || token.type === 'NUMBER' || token.type === 'BOOLEAN') {
+            return { type: 'Literal', value: token.value };
+        }
+
+        if (token.type === 'IDENTIFIER') {
+            const node = { type: 'Identifier', name: token.value };
+            const nextToken = this.peek();
+            if (nextToken && nextToken.type === 'LPAREN') {
+                this.next(); // Consume '('
+                const args = [];
+                if (this.peek() && this.peek().type !== 'RPAREN') {
+                    args.push(this.parseExpression());
+                    while (this.peek() && this.peek().type === 'COMMA') {
+                        this.next(); // Consume ','
+                        args.push(this.parseExpression());
+                    }
+                }
+                const closing = this.next();
+                if (!closing || closing.type !== 'RPAREN') {
+                    throw new Error(`Expected matching ')'`);
+                }
+                return { type: 'CallExpression', callee: node, arguments: args };
+            }
+            return node;
+        }
+
+        if (token.type === 'LPAREN') {
+            const expr = this.parseExpression();
+            const closing = this.next();
+            if (!closing || closing.type !== 'RPAREN') {
+                throw new Error(`Expected matching ')'`);
+            }
+            return expr;
+        }
+
+        throw new Error(`Unexpected token: ${JSON.stringify(token)}`);
+    }
+}
+
+// AST Evaluator
+function evaluateAST(node, context) {
+    if (!node) return undefined;
+    switch (node.type) {
+        case 'Literal':
+            return node.value;
+
+        case 'Identifier':
+            if (_ticoview_js__WEBPACK_IMPORTED_MODULE_0__.helpers.has(node.name)) {
+                return _ticoview_js__WEBPACK_IMPORTED_MODULE_0__.helpers.get(node.name);
+            }
+            if (context && node.name in context) {
+                return context[node.name];
+            }
+            return undefined;
+
+        case 'UnaryExpression':
+            const arg = evaluateAST(node.argument, context);
+            switch (node.operator) {
+                case '!': return !arg;
+                case '-': return -arg;
+                case '+': return +arg;
+                default: throw new Error(`Unsupported unary operator: ${node.operator}`);
+            }
+
+        case 'BinaryExpression':
+            const left = evaluateAST(node.left, context);
+            const right = evaluateAST(node.right, context);
+            switch (node.operator) {
+                case '+': return left + right;
+                case '-': return left - right;
+                case '*': return left * right;
+                case '/': return left / right;
+                case '&&': return left && right;
+                case '||': return left || right;
+                case '===': return left === right;
+                case '!==': return left !== right;
+                case '==': return left == right;
+                case '!=': return left != right;
+                case '<': return left < right;
+                case '>': return left > right;
+                case '<=': return left <= right;
+                case '>=': return left >= right;
+                default: throw new Error(`Unsupported binary operator: ${node.operator}`);
+            }
+
+        case 'ConditionalExpression':
+            const test = evaluateAST(node.test, context);
+            return test ? evaluateAST(node.consequent, context) : evaluateAST(node.alternate, context);
+
+        case 'CallExpression':
+            const fn = evaluateAST(node.callee, context);
+            if (typeof fn !== 'function') {
+                throw new Error(`"${node.callee.name}" is not a registered helper or callable function.`);
+            }
+            const args = node.arguments.map(arg => evaluateAST(arg, context));
+            return fn(...args);
+
+        default:
+            throw new Error(`Unsupported AST node: ${node.type}`);
+    }
+}
+
+// Dependency Extractor
+function extractDependencies(node, dependencies = new Set()) {
+    if (!node) return dependencies;
+    if (node.type === 'Identifier') {
+        if (!_ticoview_js__WEBPACK_IMPORTED_MODULE_0__.helpers.has(node.name)) {
+            dependencies.add(node.name);
+        }
+    } else if (node.type === 'BinaryExpression') {
+        extractDependencies(node.left, dependencies);
+        extractDependencies(node.right, dependencies);
+    } else if (node.type === 'UnaryExpression') {
+        extractDependencies(node.argument, dependencies);
+    } else if (node.type === 'ConditionalExpression') {
+        extractDependencies(node.test, dependencies);
+        extractDependencies(node.consequent, dependencies);
+        extractDependencies(node.alternate, dependencies);
+    } else if (node.type === 'CallExpression') {
+        node.arguments.forEach(arg => extractDependencies(arg, dependencies));
+    }
+    return dependencies;
+}
+
+// Parse string expression to AST
+function parseExpressionString(str) {
+    const tokenizer = new Tokenizer(str);
+    const tokens = tokenizer.tokenize();
+    const parser = new Parser(tokens);
+    return parser.parse();
+}
+
+
+/***/ },
+
+/***/ "./src/manipulators.js"
 /*!*****************************!*\
   !*** ./src/manipulators.js ***!
   \*****************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   DomManipulators: () => (/* binding */ DomManipulators)
 /* harmony export */ });
+/* harmony import */ var _expressions_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./expressions.js */ "./src/expressions.js");
 /**
  * manipulators.js
  *
@@ -29,6 +480,8 @@ __webpack_require__.r(__webpack_exports__);
  * be attached to particular tico-v elements within the DOM. Whenever data changes, manipulators are called to update
  * the DOM.
  */
+
+
 
 /**
  * A utility function for rendering a text string when given a the parsed tree genereted by the text parser.
@@ -38,18 +491,15 @@ __webpack_require__.r(__webpack_exports__);
  */
 function renderText(structure, data) {
     return structure.reduce((string, segment) => {
+        if (segment.ast) {
+            const val = (0,_expressions_js__WEBPACK_IMPORTED_MODULE_0__.evaluateAST)(segment.ast, data);
+            return string + (val !== undefined ? val : "");
+        }
         switch (segment.type) {
-            case 'var':
-                return string + data[segment.name];
             case 'txt':
                 return string + segment.value;
-            case 'cond':
-                return string + (data[segment.var1] ? data[segment.var1] : data[segment.var2]);
-            case 'condstr':
-                return string + (data[segment.var1] ? segment.var2 : "");
-            case 'condstrelse':
-                return string + (data[segment.var1] ? segment.var2 : segment.var3);
         }
+        return string;
     }, "");
 }
 
@@ -86,6 +536,24 @@ class AttributeManipulator {
 
     update(data, node) {
         (node || this.#entry.node).value = renderText(this.#entry.structure, data)
+    }
+}
+
+/**
+ * Responsible for manipulating nodes that should contain raw HTML.
+ *
+ * @param {Object} entry
+ */
+class RawHTMLManipulator {
+    #entry
+
+    constructor(entry) {
+        this.#entry = entry
+    }
+
+    update(data, node) {
+        const value = this.#entry.ast ? (0,_expressions_js__WEBPACK_IMPORTED_MODULE_0__.evaluateAST)(this.#entry.ast, data) : data[this.#entry.name];
+        (node || this.#entry.node).innerHTML = value !== undefined ? value : "";
     }
 }
 
@@ -208,6 +676,9 @@ class DomManipulators {
                     case 'attribute':
                         manipulator = new AttributeManipulator(entry)
                         break;
+                    case 'raw':
+                        manipulator = new RawHTMLManipulator(entry)
+                        break;
                     case 'truth':
                         manipulator = new TruthAttributeManipulator(entry, false)
                         break;
@@ -236,103 +707,114 @@ class DomManipulators {
 
 
 
-/***/ }),
+/***/ },
 
-/***/ "./src/parsers.js":
+/***/ "./src/parsers.js"
 /*!************************!*\
   !*** ./src/parsers.js ***!
   \************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   DomParser: () => (/* binding */ DomParser)
 /* harmony export */ });
+/* harmony import */ var _expressions_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./expressions.js */ "./src/expressions.js");
+
+
+/**
+ * TextParser is responsible for parsing template strings (e.g. content inside text nodes
+ * or attributes) and identifying segments containing double curly braces {{ ... }}
+ * or triple curly braces {{{ ... }}}. It parses them into expression AST nodes and
+ * extracts variable dependencies.
+ */
 class TextParser {
 
-    #regexes
-
-    constructor() {
-        this.#regexes = {
-            variable: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*}}`, 'i'),
-            condstr: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*"([^"]*)"\\s*}}`, 'i'),
-            condstrelse: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*"([^"]*)"\\s*:\\s*"([^"]*)"\\s*}}`, 'i'),
-            cond: new RegExp(`{{\\s*([a-z][a-z0-9_]*)\\s*\\?\\s*([^"]*)\\s*}}`, 'i'),
-            text: new RegExp(`{{`, 'i')
-        }
-    }
+    constructor() {}
 
     /**
-     * Push the leading text from a variable match unto the parsed list
+     * Parses a string containing template bindings into a list of structure segments
+     * (plain text, raw HTML expressions, or standard text expressions) and gathers
+     * the variable dependencies.
      *
-     * @param {string} text
-     * @param {*} match
-     * @param {Array} parsed
+     * @param {string} text The raw text string to parse.
+     * @returns {{ variables: Set<string>, structure: Array<Object> }} An object containing
+     * the set of extracted dynamic variable names and the parsed template structure segments.
      */
-    #pushLeadingText(text, match, parsed) {
-        if (match.index > 0) {
-            parsed.push({type: 'txt', value: text.substring(0, match.index)});
-        }
-    }
-
     parse (text) {
         let values = [];
         let vars = new Set();
-        let order = ['variable', 'condstrelse', 'condstr', 'cond', 'text'];
-        let index = 0;
-        let lastIndex = undefined;
 
-        // Break the text up into specific identified chunks
         while (text.length > 0) {
-            let match = null;
-            if (lastIndex !== undefined && lastIndex === index) {
-                throw `Error parsing ${text}`
-            }
-            lastIndex = index;
+            let nextThreeOpen = text.indexOf('{{{');
+            let nextTwoOpen = text.indexOf('{{');
 
-            // Loop through the regexes in the order specified
-            for (let i in order) {
-                if (text.length === 0) break;
-                match = this.#regexes[order[i]].exec(text)
-                if (match) {
-                    index = match.index + match[0].length
-                    switch (order[i]) {
-                        case 'variable':
-                            this.#pushLeadingText(text, match, values)
-                            values.push({type: 'var', name: match[1]})
-                            vars.add(match[1])
-                            text = text.substr(index, text.length - index)
-                            break;
-                        case 'condstr':
-                        case 'cond':
-                            this.#pushLeadingText(text, match, values);
-                            values.push({type: order[i], var1: match[1].trim(), var2: match[2].trim()})
-                            vars.add(match[1].trim())
-                            text = text.substr(index, text.length - index)
-                            if (order[i] === 'cond') vars.add(match[2].trim())
-                            break;
-                        case 'condstrelse':
-                            this.#pushLeadingText(text, match, values)
-                            values.push({type: 'condstrelse', var1: match[1], var2: match[2], var3: match[3]})
-                            vars.add(match[1])
-                            text = text.substr(index, text.length - index)
-                            break;
-                        case 'text':
-                            this.#pushLeadingText(text, match, values)
-                            text = text.substr(match.index, text.length - match.index)
-                            break
+            // Find the closest opener
+            let openerIdx = -1;
+            let openerLen = 0;
+
+            if (nextThreeOpen !== -1 && (nextTwoOpen === -1 || nextThreeOpen <= nextTwoOpen)) {
+                openerIdx = nextThreeOpen;
+                openerLen = 3;
+            } else if (nextTwoOpen !== -1) {
+                openerIdx = nextTwoOpen;
+                openerLen = 2;
+            }
+
+            if (openerIdx === -1) {
+                // No more expressions
+                values.push({ type: 'txt', value: text });
+                break;
+            }
+
+            // Push leading text
+            if (openerIdx > 0) {
+                values.push({ type: 'txt', value: text.substring(0, openerIdx) });
+            }
+
+            let closerStr = openerLen === 3 ? '}}}' : '}}';
+            let closerIdx = text.indexOf(closerStr, openerIdx + openerLen);
+
+            if (closerIdx === -1) {
+                // Unmatched opening bracket - treat it as plain text and continue
+                values.push({ type: 'txt', value: text.substring(openerIdx, openerIdx + openerLen) });
+                text = text.substring(openerIdx + openerLen);
+            } else {
+                let inner = text.substring(openerIdx + openerLen, closerIdx).trim();
+                try {
+                    let ast = (0,_expressions_js__WEBPACK_IMPORTED_MODULE_0__.parseExpressionString)(inner);
+                    let deps = (0,_expressions_js__WEBPACK_IMPORTED_MODULE_0__.extractDependencies)(ast);
+
+                    deps.forEach(v => vars.add(v));
+
+                    if (openerLen === 3) {
+                        // Raw variable
+                        const rawNode = { type: 'raw', name: inner };
+                        Object.defineProperty(rawNode, 'ast', {
+                            value: ast,
+                            enumerable: false,
+                            writable: true,
+                            configurable: true
+                        });
+                        values.push(rawNode);
+                    } else {
+                        // Standard expression
+                        const exprNode = { type: 'expression' };
+                        Object.defineProperty(exprNode, 'ast', {
+                            value: ast,
+                            enumerable: false,
+                            writable: true,
+                            configurable: true
+                        });
+                        values.push(exprNode);
                     }
+                } catch (e) {
+                    throw new Error(`Error parsing "${inner}": ${e.message}`);
                 }
-                if (match) break
-            }
-
-            // If none of the regexes match return the remaining part of the string as is
-            if (match === null && text.length > 0) {
-                values.push({type: 'txt', value: text})
-                break
+                text = text.substring(closerIdx + openerLen);
             }
         }
-        return {variables: vars, structure: values}
+        return { variables: vars, structure: values };
     }
 }
 
@@ -348,7 +830,7 @@ class DomParser {
     constructor() {
         this.#textParser = new TextParser()
         this.#attributeRegexes = [
-            "tv-foreach", "tv-true", "tv-not-true", "(tv-value)-([a-z0-9_\-]+)", "(tv-set)-([a-z0-9_\-]+)", "(tv-).*"
+            "tv-foreach", "tv-true", "tv-not-true", "^\\$([a-z0-9_\\-]+)", "(tv-set)-([a-z0-9_\\-]+)", "(tv-).*"
         ].map(regex => new RegExp(regex, 'i'))
     }
 
@@ -386,9 +868,9 @@ class DomParser {
      * Parse a given node for variables in its attributes that can be rendered later.
      * This method returns a parent object in cases where the attribute dictates a foreach loop.
      *
-     * @param {Node} node
-     * @param {Map} variables
-     * @param {string} path
+     * @param {Node} node The DOM element node to parse.
+     * @param {string} path The current DOM selector path.
+     * @returns {Object} An object containing parsed attribute variables and any parent loop variable structure.
      */
     #parseAttributes(node, path) {
 
@@ -402,9 +884,9 @@ class DomParser {
                 const match = regex.exec(attribute.name)
                 if (!match) continue
 
-                if (match[1] === 'tv-value') {
+                if (match[0].startsWith('$')) {
                     // Extract and set attribute node values on the fly.
-                    const attributeNode = document.createAttribute(match[2])
+                    const attributeNode = document.createAttribute(match[1])
                     const parsed = this.#textParser.parse(attribute.value)
                     node.setAttributeNode(attributeNode)
 
@@ -413,7 +895,7 @@ class DomParser {
                             {
                                 node: attributeNode,
                                 type: 'attribute',
-                                name: match[2],
+                                name: match[1],
                                 structure: parsed.structure,
                                 path: path
                             }
@@ -462,8 +944,9 @@ class DomParser {
      * Parse an element node and its children to find any text nodes or attributes that contain variables to which
      * bindings can be created.
      *
-     * @param {Node} node
-     * @param {Map} variables
+     * @param {Node} node The DOM element node to parse.
+     * @param {string} path The current DOM selector path.
+     * @returns {Map<string, Array<Object>>} A map of variable names to their bound DOM node details.
      */
     #parseNode(node, path) {
         const variables = new Map()
@@ -471,32 +954,40 @@ class DomParser {
         let children;
 
         if (attributes.parentVariable) {
-            // variables = parentDetected.variables;
             children = Array.from(node.childNodes).map(x => x.cloneNode(true))
             attributes.parentVariable.template = children
         } else {
-            children = node.childNodes
+            children = Array.from(node.childNodes)
         }
         this.#mergeVariables(variables, attributes.variables)
 
         let n = 1;
+        let indexOffset = 0;
         children.forEach((child, index) => {
             let parsed = [];
 
             if (child.nodeType === Node.TEXT_NODE) {
                 parsed = this.#textParser.parse(child.textContent)
-                parsed.variables.forEach(variable => {
-                    this.#addNodeToVariable(variables, variable,
-                        {
-                            node: child,
-                            type: 'text',
-                            structure: parsed.structure,
-                            path: path,
-                            index: index
-                        })
-                })
+                const hasRaw = parsed.structure.some(s => s.type === 'raw');
+
+                if (hasRaw) {
+                    const result = this.#handleRawSegments(child, node, parsed, variables, path, attributes, children, index, indexOffset, n);
+                    indexOffset = result.indexOffset;
+                    n = result.n;
+                } else {
+                    parsed.variables.forEach(variable => {
+                        this.#addNodeToVariable(variables, variable,
+                            {
+                                node: child,
+                                type: 'text',
+                                structure: parsed.structure,
+                                path: path,
+                                index: index + indexOffset
+                            })
+                    })
+                }
             } else if (child.nodeType === Node.ELEMENT_NODE) {
-                const childVariables = this.#parseNode(child, attributes ? "" : `${path}${path === "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
+                const childVariables = this.#parseNode(child, attributes.parentVariable ? "" : `${path}${path === "" ? "" : ">"}${child.nodeName}:nth-child(${n})`)
                 if (attributes.parentVariable) {
                     this.#mergeVariables(attributes.parentVariable.variables, childVariables)
                     this.#addNodeToVariable(variables, attributes.parentVariable.name, attributes.parentVariable)
@@ -508,6 +999,105 @@ class DomParser {
         });
 
         return variables
+    }
+
+    /**
+     * Handle the splitting of a text node when it contains raw variable segments.
+     *
+     * @param {Text} child The raw text node containing unescaped HTML template bindings.
+     * @param {Node} node The parent element node.
+     * @param {Object} parsed The parsed structure and variables from TextParser.
+     * @param {Map} variables The map tracking accumulated dynamic variable bindings.
+     * @param {string} path The current DOM selector path.
+     * @param {Object} attributes Parsed attributes and loop information of the parent node.
+     * @param {Array<Node>} children The child DOM nodes array.
+     * @param {number} index Index of the current child.
+     * @param {number} indexOffset Accumulated offset of DOM children modifications.
+     * @param {number} n The child index iterator.
+     * @returns {{ indexOffset: number, n: number }} Updated indexOffset and n values.
+     */
+    #handleRawSegments(child, node, parsed, variables, path, attributes, children, index, indexOffset, n) {
+        // Split the text node into multiple nodes
+        const segments = [];
+        let current = { type: 'text', structure: [], variables: new Set() };
+
+        parsed.structure.forEach(s => {
+            if (s.type === 'raw') {
+                if (current.structure.length > 0) {
+                    segments.push(current);
+                    current = { type: 'text', structure: [], variables: new Set() };
+                }
+                segments.push({ type: 'raw', name: s.name });
+            } else {
+                current.structure.push(s);
+                if (s.ast) {
+                    const deps = (0,_expressions_js__WEBPACK_IMPORTED_MODULE_0__.extractDependencies)(s.ast);
+                    deps.forEach(v => current.variables.add(v));
+                }
+                if (s.name) current.variables.add(s.name);
+                if (s.var1) current.variables.add(s.var1);
+                if (s.var2) current.variables.add(s.var2);
+                if (s.var3) current.variables.add(s.var3);
+            }
+        });
+        if (current.structure.length > 0) segments.push(current);
+
+        const parent = child.parentNode || node;
+        const newNodes = [];
+        segments.forEach((segment) => {
+            if (segment.type === 'raw') {
+                const placeholder = document.createElement('span');
+                placeholder.style.display = 'contents';
+                newNodes.push(placeholder);
+            } else {
+                const newTextNode = document.createTextNode("");
+                newTextNode.textContent = segment.structure.reduce((str, s) => {
+                    return str + (s.type === 'txt' ? s.value : "");
+                }, "");
+                newNodes.push(newTextNode);
+            }
+        });
+
+        // Replace the old text node with new nodes in the actual DOM or template
+        newNodes.forEach((newNode) => {
+            parent.insertBefore(newNode, child);
+        });
+        parent.removeChild(child);
+
+        // Now bind variables to the actual nodes in the DOM
+        segments.forEach((segment, sIndex) => {
+            const actualNode = newNodes[sIndex];
+            const actualIndex = Array.from(parent.childNodes).indexOf(actualNode);
+
+            if (segment.type === 'raw') {
+                this.#addNodeToVariable(variables, segment.name, {
+                    node: actualNode,
+                    type: 'raw',
+                    name: segment.name,
+                    path: path,
+                    index: actualIndex
+                });
+                n++;
+            } else {
+                segment.variables.forEach(variable => {
+                    this.#addNodeToVariable(variables, variable, {
+                        node: actualNode,
+                        type: 'text',
+                        structure: segment.structure,
+                        path: path,
+                        index: actualIndex
+                    });
+                });
+            }
+        });
+
+        if (attributes.parentVariable) {
+            // Update the template array for foreach
+            children.splice(index + indexOffset, 1, ...newNodes);
+        }
+        indexOffset += newNodes.length - 1;
+
+        return { indexOffset, n };
     }
 
     /**
@@ -523,13 +1113,101 @@ class DomParser {
 
 
 
-/***/ }),
+/***/ },
 
-/***/ "./src/update_handlers.js":
+/***/ "./src/ticoview.js"
+/*!*************************!*\
+  !*** ./src/ticoview.js ***!
+  \*************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   bind: () => (/* binding */ bind),
+/* harmony export */   helpers: () => (/* binding */ helpers),
+/* harmony export */   registerHelper: () => (/* binding */ registerHelper)
+/* harmony export */ });
+/* harmony import */ var _parsers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./parsers.js */ "./src/parsers.js");
+/* harmony import */ var _manipulators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./manipulators.js */ "./src/manipulators.js");
+/* harmony import */ var _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./update_handlers.js */ "./src/update_handlers.js");
+
+
+
+
+
+/**
+ * A view contains the DOM elements to be manipulated by Tico-V.
+ */
+class View {
+
+    #dataProxy
+    #variables
+    #manipulators
+
+    /**
+     * Create a new Tico View
+     * @param {*} variables
+     * @param {*} manipulators
+     */
+    constructor(variables, manipulators) {
+        this.#variables = variables
+        this.#manipulators = manipulators
+    }
+
+    /**
+     * Setter for the data variable.
+     * @param newData
+     */
+    set data(newData) {
+        let updateHandler = new _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__.UpdateHandler(this.#variables, this.#manipulators)
+        this.#dataProxy = new Proxy(newData, updateHandler)
+        for(let x of this.#variables.keys()) {
+            updateHandler.run(newData, x)
+        }
+    }
+
+    /**
+     * Getter for the data variable.
+     * @returns {*}
+     */
+    get data() {
+        return this.#dataProxy
+    }
+}
+
+const helpers = new Map();
+
+function registerHelper(name, fn) {
+    if (typeof fn !== 'function') {
+        throw new Error(`Register error: helper must be a function.`);
+    }
+    helpers.set(name, fn);
+}
+
+/**
+ * Bind a view to a mapping of its internal variables.
+ */
+function bind(template) {
+    const templateNode = typeof template === 'string' ? document.querySelector(template) : template;
+    if (templateNode) {
+        const domparser = new _parsers_js__WEBPACK_IMPORTED_MODULE_0__.DomParser()
+        const variables = domparser.parse(templateNode)
+        const manipulators = _manipulators_js__WEBPACK_IMPORTED_MODULE_1__.DomManipulators.create(variables)
+        return new View(variables, manipulators)
+    } else {
+        throw new Error("Could not find template node")
+    }
+}
+
+
+
+/***/ },
+
+/***/ "./src/update_handlers.js"
 /*!********************************!*\
   !*** ./src/update_handlers.js ***!
   \********************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -583,7 +1261,7 @@ class ArrayUpdateHandler {
             });
             return true;
         }
-        this.#manipulators.forEach(manipulator => manipulator.set !== undefined && manipulator.set(name, target[name])) //(x => x.set !== undefined && x.set(name, target[name]))
+        this.#manipulators.forEach(manipulator => manipulator.set !== undefined && manipulator.set(name, target[name]))
         return true;
     }
 }
@@ -619,13 +1297,16 @@ class UpdateHandler {
     }
 
     run(target, name) {
+        if (!this.#manipulators.has(name)) {
+            return;
+        }
         this.#manipulators.get(name).forEach(manipulator => {
             let manipulatedNode = undefined;
             if (this.#node) {
                 const baseNode = manipulator.variables.path === "" ? this.#node : this.#node.querySelector(manipulator.variables.path);
-                if (manipulator.variables.type == "text") {
+                if (manipulator.variables.type === "text" || manipulator.variables.type === "raw") {
                     manipulatedNode = baseNode.childNodes[manipulator.variables.index];
-                } else if (manipulator.variables.type == "attribute") {
+                } else if (manipulator.variables.type === "attribute") {
                     manipulatedNode = baseNode.getAttributeNode(manipulator.variables.name);
                 } else {
                     manipulatedNode = baseNode;
@@ -638,7 +1319,8 @@ class UpdateHandler {
 
 
 
-/***/ })
+
+/***/ }
 
 /******/ 	});
 /************************************************************************/
@@ -660,6 +1342,12 @@ class UpdateHandler {
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
+/******/ 		if (!(moduleId in __webpack_modules__)) {
+/******/ 			delete __webpack_module_cache__[moduleId];
+/******/ 			var e = new Error("Cannot find module '" + moduleId + "'");
+/******/ 			e.code = 'MODULE_NOT_FOUND';
+/******/ 			throw e;
+/******/ 		}
 /******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
@@ -696,82 +1384,12 @@ class UpdateHandler {
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
-(() => {
-/*!*************************!*\
-  !*** ./src/ticoview.js ***!
-  \*************************/
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   bind: () => (/* binding */ bind)
-/* harmony export */ });
-/* harmony import */ var _parsers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./parsers.js */ "./src/parsers.js");
-/* harmony import */ var _manipulators_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./manipulators.js */ "./src/manipulators.js");
-/* harmony import */ var _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./update_handlers.js */ "./src/update_handlers.js");
-
-
-
-
-
-/**
- * A view contains the DOM elements to be manipulated by Tico-V.
- */
-class View {
-
-    #dataProxy
-    #variables
-    #manipulators
-
-    /**
-     * Create a new Tico View
-     * @param {*} variables
-     * @param {*} manipulators
-     */
-    constructor(variables, manipulators) {
-        this.#variables = variables
-        this.#manipulators = manipulators
-    }
-
-    /**
-     * Setter for the data variable.
-     * @param newData
-     */
-    set data(newData) {
-        let updateHandler = new _update_handlers_js__WEBPACK_IMPORTED_MODULE_2__.UpdateHandler(this.#variables, this.#manipulators)
-        this.#dataProxy = new Proxy(newData, updateHandler)
-        for(let x of this.#variables.keys()) {
-            updateHandler.run(newData, x)
-        }
-        //this.#variables.keys().forEach(x => updateHandler.run(newData, x))
-    }
-
-    /**
-     * Getter for the data variable.
-     * @returns {*}
-     */
-    get data() {
-        return this.#dataProxy
-    }
-}
-
-/**
- * Bind a view to a mapping of its internal variables.
- */
-function bind(template) {
-    const templateNode = typeof template === 'string' ? document.querySelector(template) : template;
-    if (templateNode) {
-        const domparser = new _parsers_js__WEBPACK_IMPORTED_MODULE_0__.DomParser()
-        const variables = domparser.parse(templateNode)
-        const manipulators = _manipulators_js__WEBPACK_IMPORTED_MODULE_1__.DomManipulators.create(variables)
-        return new View(variables, manipulators)
-    } else {
-        throw new Error("Could not find template node")
-    }
-}
-
-})();
-
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __webpack_require__("./src/ticoview.js");
+/******/ 	
 /******/ 	return __webpack_exports__;
 /******/ })()
 ;

@@ -1,5 +1,6 @@
 /** @jest-environment jsdom */
 import { DomManipulators } from '../src/manipulators.js';
+import { parseExpressionString } from '../src/expressions.js';
 
 describe('renderText (implicit tests)', () => {
     // Helper to test renderText implicitly using TextNodeManipulator
@@ -33,44 +34,44 @@ describe('renderText (implicit tests)', () => {
     it('should render variables correctly', () => {
         const structure = [
             { type: 'txt', value: 'Hello ' },
-            { type: 'var', name: 'name' }
+            { type: 'expression', ast: parseExpressionString('name') }
         ];
         const data = { name: 'John' };
         expect(testImplicitRender(structure, data)).toBe('Hello John');
     });
 
     it('should render cond correctly when var1 is true', () => {
-        const structure = [{ type: 'cond', var1: 'a', var2: 'b' }];
+        const structure = [{ type: 'expression', ast: parseExpressionString('a ? a : b') }];
         const data = { a: 'Value A', b: 'Value B' };
         expect(testImplicitRender(structure, data)).toBe('Value A');
     });
 
     it('should render cond correctly when var1 is false', () => {
-        const structure = [{ type: 'cond', var1: 'a', var2: 'b' }];
+        const structure = [{ type: 'expression', ast: parseExpressionString('a ? a : b') }];
         const data = { a: '', b: 'Value B' };
         expect(testImplicitRender(structure, data)).toBe('Value B');
     });
 
     it('should render condstr correctly when var1 is true', () => {
-        const structure = [{ type: 'condstr', var1: 'a', var2: 'String Value' }];
+        const structure = [{ type: 'expression', ast: parseExpressionString('a ? "String Value"' ) }];
         const data = { a: true };
         expect(testImplicitRender(structure, data)).toBe('String Value');
     });
 
     it('should render condstr correctly when var1 is false', () => {
-        const structure = [{ type: 'condstr', var1: 'a', var2: 'String Value' }];
+        const structure = [{ type: 'expression', ast: parseExpressionString('a ? "String Value"') }];
         const data = { a: false };
         expect(testImplicitRender(structure, data)).toBe('');
     });
 
     it('should render condstrelse correctly when var1 is true', () => {
-        const structure = [{ type: 'condstrelse', var1: 'a', var2: 'True String', var3: 'False String' }];
+        const structure = [{ type: 'expression', ast: parseExpressionString('a ? "True String" : "False String"') }];
         const data = { a: true };
         expect(testImplicitRender(structure, data)).toBe('True String');
     });
 
     it('should render condstrelse correctly when var1 is false', () => {
-        const structure = [{ type: 'condstrelse', var1: 'a', var2: 'True String', var3: 'False String' }];
+        const structure = [{ type: 'expression', ast: parseExpressionString('a ? "True String" : "False String"') }];
         const data = { a: false };
         expect(testImplicitRender(structure, data)).toBe('False String');
     });
@@ -78,11 +79,11 @@ describe('renderText (implicit tests)', () => {
     it('should render complex structures correctly', () => {
         const structure = [
             { type: 'txt', value: 'User ' },
-            { type: 'var', name: 'username' },
+            { type: 'expression', ast: parseExpressionString('username') },
             { type: 'txt', value: ' is ' },
-            { type: 'condstrelse', var1: 'isActive', var2: 'online', var3: 'offline' },
+            { type: 'expression', ast: parseExpressionString('isActive ? "online" : "offline"') },
             { type: 'txt', value: '. Priority: ' },
-            { type: 'cond', var1: 'priority', var2: 'defaultPriority' }
+            { type: 'expression', ast: parseExpressionString('priority ? priority : defaultPriority') }
         ];
         
         const data = {

@@ -46,7 +46,7 @@ test("binds attributes to a dom element", () => {
     <html>  
         <head><title>A test page</title></head>
         <body>
-            <div id="wrapper"><div tv-value-attrib="{{value}}">Should have attribute values</div></div>
+            <div id="wrapper"><div $attrib="{{value}}">Should have attribute values</div></div>
         </body>
     </html>`
 
@@ -64,7 +64,7 @@ test("shows or hides dom nodes", () => {
     document.body.innerHTML = `<html>  
         <head><title>A test page</title></head>
         <body>
-            <div id="wrapper"><div tv-true="shown">Should have attribute values</div></div>
+            <div id="wrapper"><div #tvShowIf="shown">Should have attribute values</div></div>
         </body>
     </html>`
 
@@ -75,11 +75,11 @@ test("shows or hides dom nodes", () => {
     expect(document.body.querySelector("#wrapper > div").hidden).toEqual(false)
 })
 
-test("inversely shows or hides dom nodes", () => {
+test("evaluates boolean expressions to show or hide dom nodes", () => {
     document.body.innerHTML = `<html>  
         <head><title>A test page</title></head>
         <body>
-            <div id="wrapper"><div tv-not-true="inverseShown">Should have attribute values</div></div>
+            <div id="wrapper"><div #tvShowIf="!inverseShown">Should have attribute values</div></div>
         </body>
     </html>`
 
@@ -94,7 +94,7 @@ test("binding over foreach items", () => {
     document.body.innerHTML = `<html>
         <head><title>A test page</title></head>
         <body>
-            <ul tv-value-class="{{aclass}}" tv-foreach="items" id="wrapper">
+            <ul $class="{{aclass}}" #tvForEach="items" id="wrapper">
                 <li>{{description}}</li>
             </ul>
         </body>
@@ -153,4 +153,29 @@ test("set to add boolean attributes to nodes", () => {
 
     view.data.show = false
     expect(document.body.querySelector("#wrapper > input").hasAttribute('checked')).toEqual(false)
+})
+
+test("removes template attributes after parsing", () => {
+    document.body.innerHTML = `
+    <html>
+        <head><title>A test page</title></head>
+        <body>
+            <div id="wrapper">
+                <div $class="{{aclass}}" #tvShowIf="show" #tvForEach="items">
+                    <p>{{text}}</p>
+                </div>
+            </div>
+        </body>
+    </html>`
+    const view = bind(document.getElementById('wrapper'))
+    view.data = {
+        show: true,
+        aclass: 'my-class',
+        items: [{text: '1'}, {text: '2'}]
+    }
+
+    const div = document.body.querySelector("#wrapper > div")
+    expect(div.hasAttribute('$class')).toEqual(false)
+    expect(div.hasAttribute('#tvShowIf')).toEqual(false)
+    expect(div.hasAttribute('#tvForEach')).toEqual(false)
 })

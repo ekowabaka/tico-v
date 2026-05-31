@@ -11,8 +11,8 @@ beforeEach(() => {
         <head><title>A test page</title></head>
         <body>
             <div id="wrapper">
-                <div tv-foreach="items" id="list">
-                    <p tv-value-id="{{id}}">{{text}}</p>
+                <div #tvForEach="items" id="list">
+                    <p $id="{{id}}">{{text}}</p>
                 </div>
             </div>
         </body>

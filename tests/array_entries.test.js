@@ -9,7 +9,7 @@ test("set to add boolean attributes to list of nodes", () => {
     <html>
         <head><title>A test page</title></head>
         <body>
-            <ul tv-foreach="checks" id="wrapper">
+            <ul #tvForEach="checks" id="wrapper">
                 <li><input type="checkbox" tv-set-checked="show" /></li>
             </ul>
         </body>
@@ -31,8 +31,8 @@ test("add array and value to foreach element", () => {
         <head><title>A test page</title></head>
         <body>
             <div id="wrapper">
-                <div tv-foreach="items" id="list" tv-value-class="{{aclass}}">
-                    <p tv-value-id="{{id}}">{{text}}</p>
+                <div #tvForEach="items" id="list" $class="{{aclass}}">
+                    <p $id="{{id}}">{{text}}</p>
                 </div>
             </div>
         </body>
@@ -55,8 +55,8 @@ test("nested array values", () => {
         <head><title>A test page</title></head>
         <body>
             <div id="wrapper">
-                <div tv-foreach="items" id="list" tv-value-class="{{aclass}}">
-                    <ul tv-value-id="{{id}}" tv-foreach="subitems">
+                <div #tvForEach="items" id="list" $class="{{aclass}}">
+                    <ul $id="{{id}}" #tvForEach="subitems">
                         <li>{{subitem}}</li>
                     </ul>
                 </div>
@@ -87,7 +87,7 @@ test("pushing values into array", () => {
     document.body.innerHTML = `<html>
         <head><title>A test page</title></head>
         <body>
-            <div id="wrapper" tv-foreach="interesting">
+            <div id="wrapper" #tvForEach="interesting">
                 <span>{{value}}</span>
             </div>
         </body>
@@ -105,10 +105,10 @@ test("pushing extra values into array", () => {
         <head><title>A test page</title></head>
         <body>
             <div id="wrapper">
-                <div tv-foreach="interesting">
+                <div #tvForEach="interesting">
                     <span>{{value}}</span>
                 </div>
-                <div tv-foreach="second">
+                <div #tvForEach="second">
                     <span>{{value}}</span>
                 </div>
             </div>
